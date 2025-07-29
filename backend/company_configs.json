@@ -1,0 +1,12 @@
+{
+  "company-abc": {
+    "welcome_message": "Welcome to ABC Corp! How can we assist you?",
+    "system_prompt": "You are an assistant for ABC Corp, specializing in tech support.",
+    "knowledge_base": ["FAQ: How to reset password...", "Product: Widget X..."]
+  },
+  "company-xyz": {
+    "welcome_message": "Hello from XYZ Inc! Ask about our products!",
+    "system_prompt": "You are an assistant for XYZ Inc, focusing on e-commerce.",
+    "knowledge_base": ["FAQ: Shipping times...", "Product: Gadget Y..."]
+  }
+}
