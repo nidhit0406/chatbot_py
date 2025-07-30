@@ -56,31 +56,25 @@ products_db = {}  # {shop_domain: [product1, product2...]}
     
 #     return hmac.compare_digest(digest, hmac_param)
 
-def verify_shopify_hmac(hmac_param, query_params):
-    """Verify Shopify HMAC signature"""
-    if not SHOPIFY_API_SECRET:
-        print("Error: SHOPIFY_API_SECRET is not set")
+def validate_hmac(query_params):
+    """Validate Shopify HMAC signature"""
+    hmac_param = query_params.get('hmac')
+    if not hmac_param or not SHOPIFY_API_SECRET:
         return False
     
-    if not hmac_param:
-        print("Error: HMAC parameter is missing")
-        return False
+    # Remove hmac and sort remaining parameters
+    params = query_params.copy()
+    params.pop('hmac', None)
+    sorted_params = urlencode(sorted(params.items()))
     
-    try:
-        params = query_params.copy()
-        params.pop('hmac', None)
-        sorted_params = '&'.join([f"{k}={v}" for k, v in sorted(params.items())])
-        
-        digest = hmac.new(
-            SHOPIFY_API_SECRET.encode('utf-8'),
-            sorted_params.encode('utf-8'),
-            hashlib.sha256
-        ).hexdigest()
-        
-        return hmac.compare_digest(digest, hmac_param)
-    except Exception as e:
-        print(f"Error in HMAC verification: {str(e)}")
-        return False
+    # Calculate HMAC
+    digest = hmac.new(
+        SHOPIFY_API_SECRET.encode('utf-8'),
+        sorted_params.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    
+    return hmac.compare_digest(digest, hmac_param)
 
 def get_shopify_context(shop_domain):
     """Get Shopify store context"""
@@ -150,61 +144,47 @@ def install():
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
     return redirect(install_url)
 
-@app.route('/api/shopify/auth/callback', methods=['GET'])
-def shopify_auth_callback():
-    """Shopify OAuth callback handler"""
-    shop_url = request.args.get('shop')
-    hmac_param = request.args.get('hmac')
+
+
+@app.route('/api/shopify/auth/callback')
+def auth_callback():
+    shop = request.args.get('shop')
     code = request.args.get('code')
+    hmac_param = request.args.get('hmac')
     
-    if not shop_url:
-        return jsonify({"error": "Missing shop parameter"}), 400
-    if not hmac_param:
-        return jsonify({"error": "Missing hmac parameter"}), 400
-    if not code:
-        return jsonify({"error": "Missing code parameter"}), 400
+    # Validate required parameters
+    if not all([shop, code, hmac_param]):
+        return jsonify({"error": "Missing required parameters"}), 400
     
-    # Verify HMAC with detailed error response
-    if not verify_shopify_hmac(hmac_param, request.args):
-        return jsonify({
-            "error": "HMAC verification failed",
-            "details": {
-                "received_hmac": hmac_param,
-                "api_secret_set": bool(SHOPIFY_API_SECRET)
-            }
-        }), 401
+    # Validate HMAC
+    if not validate_hmac(request.args):
+        return jsonify({"error": "Invalid HMAC"}), 403
     
     try:
-        # Initialize session
-        session = Session(shop_url, SHOPIFY_API_VERSION)
-        
-        # Request token
-        token = session.request_token(request.args)
-        
-        # Store shop and token
-        shops_db[shop_url] = {
-            'access_token': token,
-            'chat_history': [{
-                "sender": "bot",
-                "text": "Hello! I'm your Shopify AI assistant. How can I help?",
-                "time": datetime.datetime.now().strftime("%I:%M %p, %d %b %Y")
-            }]
+        # Exchange code for access token
+        token_url = f"https://{shop}/admin/oauth/access_token"
+        token_data = {
+            'client_id': SHOPIFY_API_KEY,
+            'client_secret': SHOPIFY_API_SECRET,
+            'code': code
         }
         
-        # Add script tag to load frontend
-        shopify.ShopifyResource.activate_session(session)
-        script_tag = shopify.ScriptTag(
-            event='onload',
-            src='https://chatbot-py-two.vercel.app/chatbot.js'
-        )
-        script_tag.save()
-        shopify.ShopifyResource.clear_session()
+        token_response = requests.post(token_url, json=token_data)
+        token_response.raise_for_status()
+        access_token = token_response.json().get('access_token')
         
-        return redirect(f"https://{shop_url}/admin/apps/{SHOPIFY_API_KEY}")
-    except Exception as e:
+        # Store the access token (you'll need to implement your storage solution)
+        # Example: shops_db[shop] = {'access_token': access_token}
+        
+        # Redirect back to Shopify admin
+        return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
+    
+    except requests.exceptions.RequestException as e:
+        error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
+        print(f"OAuth Error: {error_data}")
         return jsonify({
-            "error": str(e),
-            "type": type(e).__name__
+            "error": "Installation failed", 
+            "details": error_data
         }), 500
 
 # @app.route('/api/shopify/auth/callback', methods=['GET'])
