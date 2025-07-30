@@ -59,20 +59,28 @@ products_db = {}  # {shop_domain: [product1, product2...]}
 def verify_shopify_hmac(hmac_param, query_params):
     """Verify Shopify HMAC signature"""
     if not SHOPIFY_API_SECRET:
-        print("SHOPIFY_API_SECRET is not set")
+        print("Error: SHOPIFY_API_SECRET is not set")
         return False
     
-    params = query_params.copy()
-    params.pop('hmac', None)
-    sorted_params = '&'.join([f"{k}={v}" for k, v in sorted(params.items())])
+    if not hmac_param:
+        print("Error: HMAC parameter is missing")
+        return False
     
-    digest = hmac.new(
-        SHOPIFY_API_SECRET.encode('utf-8'),
-        sorted_params.encode('utf-8'),
-        hashlib.sha256
-    ).hexdigest()
-    
-    return hmac.compare_digest(digest, hmac_param)
+    try:
+        params = query_params.copy()
+        params.pop('hmac', None)
+        sorted_params = '&'.join([f"{k}={v}" for k, v in sorted(params.items())])
+        
+        digest = hmac.new(
+            SHOPIFY_API_SECRET.encode('utf-8'),
+            sorted_params.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        
+        return hmac.compare_digest(digest, hmac_param)
+    except Exception as e:
+        print(f"Error in HMAC verification: {str(e)}")
+        return False
 
 def get_shopify_context(shop_domain):
     """Get Shopify store context"""
@@ -147,51 +155,31 @@ def shopify_auth_callback():
     """Shopify OAuth callback handler"""
     shop_url = request.args.get('shop')
     hmac_param = request.args.get('hmac')
+    code = request.args.get('code')
     
-    if not shop_url or not hmac_param:
-        return jsonify({"error": "Missing shop or hmac parameter"}), 400
+    if not shop_url:
+        return jsonify({"error": "Missing shop parameter"}), 400
+    if not hmac_param:
+        return jsonify({"error": "Missing hmac parameter"}), 400
+    if not code:
+        return jsonify({"error": "Missing code parameter"}), 400
     
+    # Verify HMAC with detailed error response
     if not verify_shopify_hmac(hmac_param, request.args):
-        return jsonify({"error": "HMAC verification failed"}), 401
-    
-    try:
-        session = Session(shop_url, SHOPIFY_API_VERSION)
-        token = session.request_token(request.args)
-        
-        # Store shop and token
-        if shop_url not in shops_db:
-            shops_db[shop_url] = {
-                'access_token': token,
-                'chat_history': [{
-                    "sender": "bot",
-                    "text": "Hello! I'm your Shopify AI assistant. How can I help?",
-                    "time": datetime.datetime.now().strftime("%I:%M %p, %d %b %Y")
-                }]
+        return jsonify({
+            "error": "HMAC verification failed",
+            "details": {
+                "received_hmac": hmac_param,
+                "api_secret_set": bool(SHOPIFY_API_SECRET)
             }
-        
-        # Add script tag to load frontend
-        script_tag = shopify.ScriptTag(
-            event='onload',
-            src='https://chatbot-py-two.vercel.app/chatbot.js'
-        )
-        script_tag.save()
-        
-        return redirect(f"https://{shop_url}/admin/apps/{SHOPIFY_API_KEY}")
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-          
-# @app.route('/api/shopify/auth/callback', methods=['GET'])
-# def shopify_auth_callback():
-    shop_url = request.args.get('shop')
-    hmac_param = request.args.get('hmac')
-    
-    if not verify_shopify_hmac(hmac_param, request.args):
-        return jsonify({"error": "HMAC verification failed"}), 401
+        }), 401
     
     try:
+        # Initialize session
         session = Session(shop_url, SHOPIFY_API_VERSION)
+        
+        # Request token
         token = session.request_token(request.args)
-        shopify.ShopifyResource.activate_session(session)
         
         # Store shop and token
         shops_db[shop_url] = {
@@ -204,16 +192,55 @@ def shopify_auth_callback():
         }
         
         # Add script tag to load frontend
+        shopify.ShopifyResource.activate_session(session)
         script_tag = shopify.ScriptTag(
             event='onload',
-            src='https://chatbot-py-two.vercel.app/chatbot.js'  # Bundle your React app
+            src='https://chatbot-py-two.vercel.app/chatbot.js'
         )
         script_tag.save()
-        
         shopify.ShopifyResource.clear_session()
+        
         return redirect(f"https://{shop_url}/admin/apps/{SHOPIFY_API_KEY}")
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "error": str(e),
+            "type": type(e).__name__
+        }), 500
+
+# @app.route('/api/shopify/auth/callback', methods=['GET'])
+# def shopify_auth_callback():
+    # shop_url = request.args.get('shop')
+    # hmac_param = request.args.get('hmac')
+    
+    # if not verify_shopify_hmac(hmac_param, request.args):
+    #     return jsonify({"error": "HMAC verification failed"}), 401
+    
+    # try:
+    #     session = Session(shop_url, SHOPIFY_API_VERSION)
+    #     token = session.request_token(request.args)
+    #     shopify.ShopifyResource.activate_session(session)
+        
+    #     # Store shop and token
+    #     shops_db[shop_url] = {
+    #         'access_token': token,
+    #         'chat_history': [{
+    #             "sender": "bot",
+    #             "text": "Hello! I'm your Shopify AI assistant. How can I help?",
+    #             "time": datetime.datetime.now().strftime("%I:%M %p, %d %b %Y")
+    #         }]
+    #     }
+        
+    #     # Add script tag to load frontend
+    #     script_tag = shopify.ScriptTag(
+    #         event='onload',
+    #         src='https://chatbot-py-two.vercel.app/chatbot.js'  # Bundle your React app
+    #     )
+    #     script_tag.save()
+        
+    #     shopify.ShopifyResource.clear_session()
+    #     return redirect(f"https://{shop_url}/admin/apps/{SHOPIFY_API_KEY}")
+    # except Exception as e:
+    #     return jsonify({"error": str(e)}), 500
 
 
 # In-memory chat history (replace with a database for production)
