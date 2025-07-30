@@ -161,22 +161,28 @@ def auth_callback():
         return jsonify({"error": "Invalid HMAC"}), 403
     
     try:
-        # Exchange code for access token
+        # 1. Get access token
         token_url = f"https://{shop}/admin/oauth/access_token"
-        token_data = {
+        token_response = requests.post(token_url, json={
             'client_id': SHOPIFY_API_KEY,
             'client_secret': SHOPIFY_API_SECRET,
             'code': code
-        }
-        
-        token_response = requests.post(token_url, json=token_data)
+        })
         token_response.raise_for_status()
-        access_token = token_response.json().get('access_token')
-        
-        # Store the access token (you'll need to implement your storage solution)
-        # Example: shops_db[shop] = {'access_token': access_token}
-        
-        # Redirect back to Shopify admin
+        access_token = token_response.json()['access_token']
+
+        # 2. Embed app in Shopify admin
+        embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+        requests.post(embed_url, json={
+            "script_tag": {
+                "src": f"https://chatbot-py-two.vercel.app/",
+                "event": "onload"
+            }
+        }, headers={
+            "X-Shopify-Access-Token": access_token
+        })
+
+        # 3. Redirect to app in admin
         return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
     
     except requests.exceptions.RequestException as e:
