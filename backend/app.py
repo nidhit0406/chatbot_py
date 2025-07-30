@@ -126,32 +126,32 @@ def install():
 
 @app.route('/api/shopify/auth/callback', methods=['GET'])
 def shopify_auth_callback():
-#     """Shopify OAuth callback handler"""
-#     shop_url = request.args.get('shop')
-#     hmac_param = request.args.get('hmac')
+    """Shopify OAuth callback handler"""
+    shop_url = request.args.get('shop')
+    hmac_param = request.args.get('hmac')
     
-#     if not verify_shopify_hmac(hmac_param, request.args):
-#         return jsonify({"error": "HMAC verification failed"}), 401
+    if not verify_shopify_hmac(hmac_param, request.args):
+        return jsonify({"error": "HMAC verification failed"}), 401
     
-#     try:
-#         session = Session(shop_url, SHOPIFY_API_VERSION)
-#         token = session.request_token(request.args)
+    try:
+        session = Session(shop_url, SHOPIFY_API_VERSION)
+        token = session.request_token(request.args)
         
-#         # Store shop and token
-#         if shop_url not in shops_db:
-#             shops_db[shop_url] = {
-#                 'access_token': token,
-#                 'chat_history': [{
-#                     "sender": "bot",
-#                     "text": "Hello! I'm your Shopify AI assistant. How can I help?",
-#                     "time": datetime.datetime.now().strftime("%I:%M %p, %d %b %Y")
-#                 }]
-#             }
+        # Store shop and token
+        if shop_url not in shops_db:
+            shops_db[shop_url] = {
+                'access_token': token,
+                'chat_history': [{
+                    "sender": "bot",
+                    "text": "Hello! I'm your Shopify AI assistant. How can I help?",
+                    "time": datetime.datetime.now().strftime("%I:%M %p, %d %b %Y")
+                }]
+            }
         
-#         # Redirect to Shopify admin
-#         return redirect(f"https://{shop_url}/admin/apps/{SHOPIFY_API_KEY}")
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
+        # Redirect to Shopify admin
+        return redirect(f"https://{shop_url}/admin/apps/{SHOPIFY_API_KEY}")
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     
 # @app.route('/api/shopify/auth/callback', methods=['GET'])
 # def shopify_auth_callback():
