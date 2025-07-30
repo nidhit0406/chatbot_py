@@ -42,8 +42,26 @@ shops_db = {}  # {shop_domain: {access_token: str, chat_history: list}}
 products_db = {}  # {shop_domain: [product1, product2...]}
 
 # Helper Functions
+# def verify_shopify_hmac(hmac_param, query_params):
+#     """Verify Shopify HMAC signature"""
+#     params = query_params.copy()
+#     params.pop('hmac', None)
+#     sorted_params = '&'.join([f"{k}={v}" for k, v in sorted(params.items())])
+    
+#     digest = hmac.new(
+#         SHOPIFY_API_SECRET.encode('utf-8'),
+#         sorted_params.encode('utf-8'),
+#         hashlib.sha256
+#     ).hexdigest()
+    
+#     return hmac.compare_digest(digest, hmac_param)
+
 def verify_shopify_hmac(hmac_param, query_params):
     """Verify Shopify HMAC signature"""
+    if not SHOPIFY_API_SECRET:
+        print("SHOPIFY_API_SECRET is not set")
+        return False
+    
     params = query_params.copy()
     params.pop('hmac', None)
     sorted_params = '&'.join([f"{k}={v}" for k, v in sorted(params.items())])
@@ -130,6 +148,9 @@ def shopify_auth_callback():
     shop_url = request.args.get('shop')
     hmac_param = request.args.get('hmac')
     
+    if not shop_url or not hmac_param:
+        return jsonify({"error": "Missing shop or hmac parameter"}), 400
+    
     if not verify_shopify_hmac(hmac_param, request.args):
         return jsonify({"error": "HMAC verification failed"}), 401
     
@@ -148,11 +169,17 @@ def shopify_auth_callback():
                 }]
             }
         
-        # Redirect to Shopify admin
+        # Add script tag to load frontend
+        script_tag = shopify.ScriptTag(
+            event='onload',
+            src='https://chatbot-py-two.vercel.app/chatbot.js'
+        )
+        script_tag.save()
+        
         return redirect(f"https://{shop_url}/admin/apps/{SHOPIFY_API_KEY}")
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+          
 # @app.route('/api/shopify/auth/callback', methods=['GET'])
 # def shopify_auth_callback():
     shop_url = request.args.get('shop')
