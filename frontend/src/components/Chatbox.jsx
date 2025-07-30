@@ -13,7 +13,7 @@ const ChatBox = () => {
 
     // Fetch initial messages from backend
    useEffect(() => {
-    axios.get('http://localhost:5000/api/messages') // Update to match backend port
+    axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/api/messages`) // Update to match backend port
         .then(response => setChat(response.data))
         .catch(error => console.error('Error fetching messages:', error));
 }, []);
@@ -46,7 +46,7 @@ const ChatBox = () => {
             setMessage('');
             setIsTyping(true);
 
-            const response = await axios.post('http://localhost:5000/api/messages', { text: message });
+            const response = await axios.post(`${import.meta.env.VITE_APP_BACKEND_URL}/api/messages`, { text: message });
             setChat(prevChat => [...prevChat, response.data.message]);
             setIsTyping(false);
         } catch (error) {
@@ -57,7 +57,7 @@ const ChatBox = () => {
 
     const handleClearChat = async () => {
         try {
-            const res = await axios.post('http://localhost:5000/api/messages/clear');
+            const res = await axios.post(`${import.meta.env.VITE_APP_BACKEND_URL}/api/messages/clear`);
             if (res.data.status === 'success') {
                 setChat([{
                     sender: "bot",
