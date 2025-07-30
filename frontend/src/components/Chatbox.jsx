@@ -17,23 +17,51 @@ const ChatBox = () => {
 //         .then(response => setChat(response.data))
 //         .catch(error => console.error('Error fetching messages:', error));
 // }, []);
-useEffect(() => {
-        axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/api/messages`, {
-            headers: { 'X-Shop-Domain': shop }
-        })
-            .then(response => setChat(response.data))
-            .catch(error => console.error('Error fetching messages:', error));
-    }, [shop]);
+   useEffect(() => {
+    axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/api/messages`) // Update to match backend port
+        .then(response => setChat(response.data))
+        .catch(error => console.error('Error fetching messages:', error));
+}, []);
 
     // Auto-scroll to bottom when new messages arrive or typing indicator changes
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [chat, isTyping]);
 
+    const sendMessage = async () => {
+        if (message.trim() === '') return;
+
+        // Create real-time timestamp in IST
+        const realTime = new Date().toLocaleString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+
+        try {
+            const userMessage = {
+                sender: 'user',
+                text: message,
+                time: realTime
+            };
+            setChat(prevChat => [...prevChat, userMessage]);
+            setMessage('');
+            setIsTyping(true);
+
+            const response = await axios.post(`${import.meta.env.VITE_APP_BACKEND_URL}/api/messages`, { text: message });
+            setChat(prevChat => [...prevChat, response.data.message]);
+            setIsTyping(false);
+        } catch (error) {
+            console.error('Error sending message:', error);
+            setIsTyping(false);
+        }
+    };
+
     // const sendMessage = async () => {
     //     if (message.trim() === '') return;
-
-    //     // Create real-time timestamp in IST
     //     const realTime = new Date().toLocaleString('en-IN', {
     //         hour: '2-digit',
     //         minute: '2-digit',
@@ -42,7 +70,6 @@ useEffect(() => {
     //         month: 'short',
     //         year: 'numeric'
     //     });
-
     //     try {
     //         const userMessage = {
     //             sender: 'user',
@@ -53,7 +80,11 @@ useEffect(() => {
     //         setMessage('');
     //         setIsTyping(true);
 
-    //         const response = await axios.post(`${import.meta.env.VITE_APP_BACKEND_URL}/api/messages`, { text: message });
+    //         const response = await axios.post(
+    //             `${import.meta.env.VITE_APP_BACKEND_URL}/api/messages`,
+    //             { text: message },
+    //             { headers: { 'X-Shop-Domain': shop } }
+    //         );
     //         setChat(prevChat => [...prevChat, response.data.message]);
     //         setIsTyping(false);
     //     } catch (error) {
@@ -61,62 +92,6 @@ useEffect(() => {
     //         setIsTyping(false);
     //     }
     // };
-
-    const sendMessage = async () => {
-        if (message.trim() === '') return;
-        const realTime = new Date().toLocaleString('en-IN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true,
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        });
-try {
-            const res = await axios.post(
-                `${import.meta.env.VITE_APP_BACKEND_URL}/api/messages/clear`,
-                {},
-                { headers: { 'X-Shop-Domain': shop } }
-            );
-            if (res.data.status === 'success') {
-                setChat([{
-                    sender: "bot",
-                    text: "Hello! How can I help you today?",
-                    time: new Date().toLocaleString('en-IN', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: true,
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric'
-                    })
-                }]);
-            }
-        } catch (error) {
-            console.error('Error clearing chat:', error);
-        }
-        // try {
-        //     const userMessage = {
-        //         sender: 'user',
-        //         text: message,
-        //         time: realTime
-        //     };
-        //     setChat(prevChat => [...prevChat, userMessage]);
-        //     setMessage('');
-        //     setIsTyping(true);
-
-        //     const response = await axios.post(
-        //         `${import.meta.env.VITE_APP_BACKEND_URL}/api/messages`,
-        //         { text: message },
-        //         { headers: { 'X-Shop-Domain': shop } }
-        //     );
-        //     setChat(prevChat => [...prevChat, response.data.message]);
-        //     setIsTyping(false);
-        // } catch (error) {
-        //     console.error('Error sending message:', error);
-        //     setIsTyping(false);
-        // }
-    };
 
     const handleClearChat = async () => {
         try {
