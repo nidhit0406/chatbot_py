@@ -219,7 +219,9 @@ def clear_messages():
     return jsonify({"status": "success", "message": "Chat history cleared"})
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    import os
+    port = int(os.environ.get('PORT', 5000))  # Use Render's assigned port
+    app.run(host='0.0.0.0', port=port, debug=True)
 
 
 
