@@ -17,7 +17,7 @@ app = Flask(__name__)
 # Configure CORS
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:5173"],
+        "origins": "*",
         "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
         "allow_headers": ["Content-Type", "Authorization", "X-Shop-Domain"],
         "supports_credentials": True,
@@ -35,7 +35,7 @@ AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4")
 SHOPIFY_API_KEY = os.getenv("SHOPIFY_API_KEY")
 SHOPIFY_API_SECRET = os.getenv("SHOPIFY_API_SECRET")
 SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2023-07")
-APP_URL = os.getenv("APP_URL", "http://localhost:5173")
+APP_URL = os.getenv("APP_URL")
 
 # Database simulation
 shops_db = {}  # {shop_domain: {access_token: str, chat_history: list}}
