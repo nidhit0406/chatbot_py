@@ -8,19 +8,19 @@
 // })
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
-import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react()],
   build: {
     lib: {
-      entry: path.resolve(__dirname, 'src/widget.jsx'),
+      entry: path.resolve(__dirname, 'src/widget.jsx'), // or widget.js
       name: 'ChatbotWidget',
-      fileName: () => `widget.js`,
+      fileName: () => 'widget.js',
       formats: ['iife']
     },
     rollupOptions: {
+      external: ['react', 'react-dom'],
       output: {
         globals: {
           react: 'React',
@@ -30,4 +30,5 @@ export default defineConfig({
     }
   }
 });
+
 
