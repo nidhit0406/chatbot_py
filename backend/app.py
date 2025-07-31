@@ -109,7 +109,7 @@ def root():
     # Case 1: Shopify OAuth flow
     if shop and hmac_param:
         if verify_shopify_hmac(hmac_param, request.args):
-            return redirect(f'/api/shopify/install?{urlencode(request.args)}')
+            return redirect(f'/install?{urlencode(request.args)}')
         return "Invalid HMAC signature", 400
     
     # Case 2: Direct access
@@ -140,7 +140,7 @@ def install():
         return "Shop parameter missing", 400
     
     scopes = 'write_script_tags,read_products'
-    redirect_uri = f"{APP_URL}/api/shopify/auth/callback"  # Fixed syntax
+    redirect_uri = f"{APP_URL}/auth/callback"  # Fixed syntax
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
     return redirect(install_url)
 
@@ -193,7 +193,7 @@ def install():
     #         "details": error_data
     #     }), 500
 
-@app.route('/api/shopify/auth/callback')
+@app.route('/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
     code = request.args.get('code')
