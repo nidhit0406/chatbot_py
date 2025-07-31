@@ -147,7 +147,7 @@ def install():
 
 
 
-@app.route('/api/shopify/auth/callback')
+@app.route('/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
     code = request.args.get('code')
