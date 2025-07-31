@@ -149,9 +149,47 @@ def install():
 
 
 
-
-@app.route('/auth/callback')
+@app.route('/api/shopify/auth/callback')
 def auth_callback():
+    shop = request.args.get('shop')
+    code = request.args.get('code')
+    hmac_param = request.args.get('hmac')
+    
+    if not all([shop, code, hmac_param]):
+        return jsonify({"error": "Missing required parameters"}), 400
+    
+    if not validate_hmac(request.args):
+        return jsonify({"error": "Invalid HMAC"}), 403
+    
+    try:
+        # Existing token retrieval logic...
+        token_url = f"https://{shop}/admin/oauth/access_token"
+        token_response = requests.post(token_url, json={
+            'client_id': SHOPIFY_API_KEY,
+            'client_secret': SHOPIFY_API_SECRET,
+            'code': code
+        })
+        token_response.raise_for_status()
+        access_token = token_response.json()['access_token']
+
+        # Add or update script tag
+        embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+        script_tag_response = requests.get(embed_url, headers={"X-Shopify-Access-Token": access_token})
+        if script_tag_response.status_code == 200 and not any(tag["src"] == f"https://chatbot-bpy.clustersofttech.com/widget.js" for tag in script_tag_response.json().get("script_tags", [])):
+            requests.post(embed_url, json={
+                "script_tag": {
+                    "src": f"https://chatbot-bpy.clustersofttech.com/widget.js",
+                    "event": "onload"
+                }
+            }, headers={"X-Shopify-Access-Token": access_token})
+
+        return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
+    
+    except requests.exceptions.RequestException as e:
+        error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
+        return jsonify({"error": "Installation failed", "details": error_data}), 500
+# @app.route('/auth/callback')
+# def auth_callback():
     shop = request.args.get('shop')
     code = request.args.get('code')
     hmac_param = request.args.get('hmac')
