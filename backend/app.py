@@ -152,7 +152,7 @@ def auth_callback():
     shop = request.args.get('shop')
     code = request.args.get('code')
     hmac_param = request.args.get('hmac')
-    host = request.args.get('host')  # ✅ Add this line
+    host = request.args.get('host')
 
     if not all([shop, code, hmac_param]):
         return jsonify({"error": "Missing required parameters"}), 400
@@ -161,6 +161,7 @@ def auth_callback():
         return jsonify({"error": "Invalid HMAC"}), 403
 
     try:
+        # Step 1: Get access token
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
             'client_id': SHOPIFY_API_KEY,
@@ -170,25 +171,31 @@ def auth_callback():
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
 
-        # Save the token
+        # Step 2: Save token
         shops_db[shop] = {'access_token': access_token}
 
-        # Optional: Add script_tag
-        requests.post(
-    f"https://{shop}/admin/api/2024-01/script_tags.json",
-    json={
-        "script_tag": {
-            "event": "onload",
-            "src": "https://chatbot-py-two.vercel.app/widget.js",
-            "display_scope": "all"
+        # Step 3: Inject ScriptTag (chatbot widget)
+        script_tag_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+        script_tag_payload = {
+            "script_tag": {
+                "event": "onload",
+                "src": f"{APP_URL}/widget.js",  # or use a hosted URL like https://your-vercel-domain/widget.js
+                "display_scope": "all"
+            }
         }
-    },
-    headers={"X-Shopify-Access-Token": access_token}
-)
-        print(f"Shop {shop} installed successfully with access token: {access_token}")
 
+        script_tag_response = requests.post(
+            script_tag_url,
+            json=script_tag_payload,
+            headers={"X-Shopify-Access-Token": access_token}
+        )
 
-        # ✅ Fix the redirect (shop & host are now defined)
+        if script_tag_response.status_code == 201:
+            print(f"✅ Script tag injected for {shop}")
+        else:
+            print(f"⚠️ Failed to inject script tag: {script_tag_response.json()}")
+
+        # Step 4: Redirect to your app
         redirect_url = f"{APP_URL}?shop={shop}&host={host}"
         return redirect(redirect_url)
 
@@ -197,8 +204,6 @@ def auth_callback():
         print(f"OAuth Error: {error_data}")
         return jsonify({"error": "Installation failed", "details": error_data}), 500
 
-
-# In-memory chat history (replace with a database for production)
 chat_history = [
     {
         "sender": "bot",

@@ -14,15 +14,21 @@ export default defineConfig({
   plugins: [react()],
   build: {
     lib: {
-      entry: path.resolve(__dirname, 'src/widget.jsx'), // ✅ correct entry
+      entry: path.resolve(__dirname, 'src/widget.jsx'),
       name: 'ChatbotWidget',
       fileName: () => 'widget.js',
-      formats: ['iife'] // ✅ for <script src="...">
+      formats: ['iife'], // MUST be IIFE for browser <script> tag
     },
     rollupOptions: {
-      external: [], // ✅ include React inside
-    }
-  }
+      output: {
+        globals: {
+          react: 'React',
+          'react-dom': 'ReactDOM',
+        },
+      },
+    },
+  },
 });
+;
 
 
