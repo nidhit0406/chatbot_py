@@ -16,7 +16,7 @@ app = Flask(__name__)
 # ✅ Add this near the bottom of the file:
 @app.route('/widget.js')
 def serve_widget():
-    return send_from_directory('dist', 'widget.js', mimetype='application/javascript')
+    return send_from_directory('static', 'widget.js')
 # Configure CORS
 CORS(app, resources={
     r"/api/*": {
@@ -178,13 +178,22 @@ def auth_callback():
         # 2. Embed app in Shopify admin
         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
         requests.post(embed_url, json={
-            "script_tag": {
-                "src": f"https://chatbot-py-two.vercel.app/",
-                "event": "onload"
-            }
-        }, headers={
-            "X-Shopify-Access-Token": access_token
-        })
+    "script_tag": {
+        "src": f"https://chatbot-bpy.clustersofttech.com/widget.js",
+        "event": "onload"
+    }
+}, headers={
+    "X-Shopify-Access-Token": access_token
+})
+        # embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+        # requests.post(embed_url, json={
+        #     "script_tag": {
+        #         "src": f"https://chatbot-py-two.vercel.app/",
+        #         "event": "onload"
+        #     }
+        # }, headers={
+        #     "X-Shopify-Access-Token": access_token
+        # })
  
         # 3. Redirect to app in admin
         return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")

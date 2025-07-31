@@ -8,6 +8,7 @@ import Chatbox from './components/Chatbox';
   container.id = 'chatbot-root';
   document.body.appendChild(container);
 
+  const backendUrl = 'https://chatbot-bpy.clustersofttech.com'; // Adjust for production
   const root = ReactDOM.createRoot(container);
-  root.render(React.createElement(Chatbox));
+  root.render(React.createElement(Chatbox, { backendUrl }));
 })();
