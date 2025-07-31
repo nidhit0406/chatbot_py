@@ -99,6 +99,13 @@ def get_shopify_context(shop_domain):
     finally:
         shopify.ShopifyResource.clear_session()
 
+                # =============== Shopify OAuth Flow ===============
+@app.route('/api/shopify/auth/callback')
+def shopify_auth_callback():
+    # ... your auth logic here
+    redirect_url = f"{os.getenv('APP_URL')}?shop={shop}&host={host}"
+    return redirect(redirect_url)
+
 # Routes
 @app.route('/')
 def root():
