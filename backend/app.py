@@ -147,21 +147,22 @@ def install():
 
 
 
-@app.route('/auth/callback')
+@app.route('/api/shopify/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
     code = request.args.get('code')
     hmac_param = request.args.get('hmac')
-    host = request.args.get('host')
-
+    
+    # Validate required parameters
     if not all([shop, code, hmac_param]):
         return jsonify({"error": "Missing required parameters"}), 400
-
+    
+    # Validate HMAC
     if not validate_hmac(request.args):
         return jsonify({"error": "Invalid HMAC"}), 403
-
+    
     try:
-        # Step 1: Get access token
+        # 1. Get access token
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
             'client_id': SHOPIFY_API_KEY,
@@ -170,40 +171,28 @@ def auth_callback():
         })
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
-
-        # Step 2: Save token
-        shops_db[shop] = {'access_token': access_token}
-
-        # Step 3: Inject ScriptTag (chatbot widget)
-        script_tag_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-        script_tag_payload = {
+ 
+        # 2. Embed app in Shopify admin
+        embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+        requests.post(embed_url, json={
             "script_tag": {
-                "event": "onload",
-                "src": f"{APP_URL}/widget.js",  # or use a hosted URL like https://your-vercel-domain/widget.js
-                "display_scope": "all"
+                "src": f"https://chatbot-py-two.vercel.app/",
+                "event": "onload"
             }
-        }
-
-        script_tag_response = requests.post(
-            script_tag_url,
-            json=script_tag_payload,
-            headers={"X-Shopify-Access-Token": access_token}
-        )
-
-        if script_tag_response.status_code == 201:
-            print(f"✅ Script tag injected for {shop}")
-        else:
-            print(f"⚠️ Failed to inject script tag: {script_tag_response.json()}")
-
-        # Step 4: Redirect to your app
-        redirect_url = f"{APP_URL}?shop={shop}&host={host}"
-        return redirect(redirect_url)
-
+        }, headers={
+            "X-Shopify-Access-Token": access_token
+        })
+ 
+        # 3. Redirect to app in admin
+        return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
+    
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
         print(f"OAuth Error: {error_data}")
-        return jsonify({"error": "Installation failed", "details": error_data}), 500
-
+        return jsonify({
+            "error": "Installation failed",
+            "details": error_data
+        }), 500
 chat_history = [
     {
         "sender": "bot",
