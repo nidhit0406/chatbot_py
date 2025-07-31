@@ -221,10 +221,17 @@ def auth_callback():
 
         # Optional: Add script_tag
         requests.post(
-            f"https://{shop}/admin/api/{SHOPIFY_API_VERSION}/script_tags.json",
-            json={"script_tag": {"src": "https://chatbot-py-two.vercel.app/", "event": "onload"}},
-            headers={"X-Shopify-Access-Token": access_token}
-        )
+    f"https://{shop}/admin/api/2024-01/script_tags.json",
+    json={
+        "script_tag": {
+            "event": "onload",
+            "src": "https://chatbot-py-two.vercel.app/widget.js",
+            "display_scope": "all"
+        }
+    },
+    headers={"X-Shopify-Access-Token": access_token}
+)
+
 
         # ✅ Fix the redirect (shop & host are now defined)
         redirect_url = f"{APP_URL}?shop={shop}&host={host}"

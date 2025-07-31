@@ -18,7 +18,7 @@ export default defineConfig({
       entry: path.resolve(__dirname, 'src/widget.jsx'),
       name: 'ChatbotWidget',
       fileName: () => `widget.js`,
-      formats: ['iife'] // Must be IIFE to work as a <script src="...">
+      formats: ['iife']
     },
     rollupOptions: {
       output: {
@@ -30,3 +30,4 @@ export default defineConfig({
     }
   }
 });
+
