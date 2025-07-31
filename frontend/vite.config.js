@@ -19,7 +19,7 @@ export default defineConfig({
       entry: path.resolve(__dirname, 'widget.jsx'),
       name: 'ChatbotWidget',
       fileName: () => 'widget.js',
-      formats: ['iife'], // 🔥 needed for Shopify
+      formats: ['iife'], // Needed for Shopify
     },
     rollupOptions: {
       external: [],
