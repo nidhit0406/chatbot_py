@@ -144,6 +144,8 @@ def install():
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
     return redirect(install_url)
 
+
+
 @app.route('/api/shopify/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
@@ -159,7 +161,7 @@ def auth_callback():
         return jsonify({"error": "Invalid HMAC"}), 403
     
     try:
-        # Get access token
+        # 1. Get access token
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
             'client_id': SHOPIFY_API_KEY,
@@ -169,30 +171,18 @@ def auth_callback():
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
 
-        # Store access token
-        shops_db[shop] = {
-            'access_token': access_token,
-            'chat_history': [{
-                "sender": "bot",
-                "text": "Hello! I'm your Shopify AI assistant. How can I help?",
-                "time": datetime.datetime.now().strftime("%I:%M %p, %d %b %Y")
-            }]
-        }
-
-        # Embed script tag
+        # 2. Embed app in Shopify admin
         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-        script_response = requests.post(embed_url, json={
+        requests.post(embed_url, json={
             "script_tag": {
-                "src": f"https://chatbot-py-two.vercel.app/chatbot.js",  # Ensure this points to a valid JS file
+                "src": f"https://chatbot-py-two.vercel.app/",
                 "event": "onload"
             }
         }, headers={
             "X-Shopify-Access-Token": access_token
         })
-        script_response.raise_for_status()
-        print(f"Script tag created: {script_response.json()}")
 
-        # Redirect to app in admin
+        # 3. Redirect to app in admin
         return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
     
     except requests.exceptions.RequestException as e:
