@@ -1,11 +1,13 @@
+// widget.jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import Chatbox from './components/Chatbox'; // your existing component
+import Chatbox from './components/Chatbox';
 
-const container = document.createElement('div');
-container.id = 'chatbot-root';
-document.body.appendChild(container);
+(function () {
+  const container = document.createElement('div');
+  container.id = 'chatbot-root';
+  document.body.appendChild(container);
 
-const root = ReactDOM.createRoot(container);
-root.render(<Chatbox />);
-
+  const root = ReactDOM.createRoot(container);
+  root.render(React.createElement(Chatbox));
+})();

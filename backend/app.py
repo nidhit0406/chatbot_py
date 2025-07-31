@@ -13,7 +13,10 @@ import shopify
 
 # Initialize Flask app
 app = Flask(__name__)
-
+# ✅ Add this near the bottom of the file:
+@app.route('/widget.js')
+def serve_widget():
+    return send_from_directory('dist', 'widget.js', mimetype='application/javascript')
 # Configure CORS
 CORS(app, resources={
     r"/api/*": {
