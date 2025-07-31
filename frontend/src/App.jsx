@@ -1,44 +1,44 @@
-// import { useState } from 'react';
-// import { SiWechat } from 'react-icons/si';
-// import Chatbox from './components/Chatbox';
-// import { PiChatCircleSlashFill } from "react-icons/pi";
+import { useState } from 'react';
+import { SiWechat } from 'react-icons/si';
+import Chatbox from './components/Chatbox';
+import { PiChatCircleSlashFill } from "react-icons/pi";
 
-// function App() {
-//   const [isChatOpen, setIsChatOpen] = useState(false);
+function App() {
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
-//   const toggleChat = () => {
-//     setIsChatOpen(!isChatOpen);
-//   };
+  const toggleChat = () => {
+    setIsChatOpen(!isChatOpen);
+  };
 
-//   return (
-//     <div className="w-screen h-screen flex justify-center items-center bg-gray-100">
-//       {/* WeChat Icon */}
-//       {!isChatOpen && (
-//         <button
-//           onClick={toggleChat}
-//           className="fixed bottom-5 right-5 bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-full shadow-lg transition-colors duration-200"
-//         >
-//           <SiWechat className="text-2xl" />
-//         </button>
-//       )}
+  return (
+    <div className="w-screen h-screen flex justify-center items-center bg-gray-100">
+      {/* WeChat Icon */}
+      {!isChatOpen && (
+        <button
+          onClick={toggleChat}
+          className="fixed bottom-5 right-5 bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-full shadow-lg transition-colors duration-200"
+        >
+          <SiWechat className="text-2xl" />
+        </button>
+      )}
 
-//       {/* Chatbox */}
-//       {isChatOpen && (
-//         <div className="w-[90%] max-w-md fixed bottom-5 right-5 flex flex-col items-end">
-//           <Chatbox />
-//           <button
-//             onClick={toggleChat}
-//             className="mt-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors duration-200"
-//           >
-//             <PiChatCircleSlashFill />
-//           </button>
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
+      {/* Chatbox */}
+      {isChatOpen && (
+        <div className="w-[90%] max-w-md fixed bottom-5 right-5 flex flex-col items-end">
+          <Chatbox />
+          <button
+            onClick={toggleChat}
+            className="mt-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors duration-200"
+          >
+            <PiChatCircleSlashFill />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
-// export default App;
+export default App;
 
 
 
@@ -137,78 +137,78 @@
 // // if __name__ == '__main__':
 // //     app.run(port=5000, debug=True)
 
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { useState } from 'react';
-import { SiWechat } from 'react-icons/si';
-import Chatbox from './components/Chatbox';
-import { PiChatCircleSlashFill } from "react-icons/pi";
+// import React from 'react';
+// import ReactDOM from 'react-dom/client';
+// import { useState } from 'react';
+// import { SiWechat } from 'react-icons/si';
+// import Chatbox from './components/Chatbox';
+// import { PiChatCircleSlashFill } from "react-icons/pi";
 
-const WidgetApp = () => {
-  const [isChatOpen, setIsChatOpen] = useState(false);
+// const WidgetApp = () => {
+//   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  const toggleChat = () => {
-    setIsChatOpen(!isChatOpen);
-  };
+//   const toggleChat = () => {
+//     setIsChatOpen(!isChatOpen);
+//   };
 
-  return (
-    <>
-      {/* Floating Button */}
-      {!isChatOpen && (
-        <button
-          onClick={toggleChat}
-          style={{
-            position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            backgroundColor: '#9333ea',
-            color: 'white',
-            padding: '12px',
-            borderRadius: '50%',
-            zIndex: 99999,
-            border: 'none',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-          }}
-        >
-          <SiWechat style={{ fontSize: '24px' }} />
-        </button>
-      )}
+//   return (
+//     <>
+//       {/* Floating Button */}
+//       {!isChatOpen && (
+//         <button
+//           onClick={toggleChat}
+//           style={{
+//             position: 'fixed',
+//             bottom: '20px',
+//             right: '20px',
+//             backgroundColor: '#9333ea',
+//             color: 'white',
+//             padding: '12px',
+//             borderRadius: '50%',
+//             zIndex: 99999,
+//             border: 'none',
+//             boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+//           }}
+//         >
+//           <SiWechat style={{ fontSize: '24px' }} />
+//         </button>
+//       )}
 
-      {/* Chatbox */}
-      {isChatOpen && (
-        <div style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          width: '90%',
-          maxWidth: '400px',
-          zIndex: 99999
-        }}>
-          <Chatbox />
-          <button
-            onClick={toggleChat}
-            style={{
-              marginTop: '6px',
-              backgroundColor: '#ef4444',
-              color: 'white',
-              padding: '8px',
-              borderRadius: '50%',
-              border: 'none',
-              cursor: 'pointer'
-            }}
-          >
-            <PiChatCircleSlashFill />
-          </button>
-        </div>
-      )}
-    </>
-  );
-};
+//       {/* Chatbox */}
+//       {isChatOpen && (
+//         <div style={{
+//           position: 'fixed',
+//           bottom: '20px',
+//           right: '20px',
+//           width: '90%',
+//           maxWidth: '400px',
+//           zIndex: 99999
+//         }}>
+//           <Chatbox />
+//           <button
+//             onClick={toggleChat}
+//             style={{
+//               marginTop: '6px',
+//               backgroundColor: '#ef4444',
+//               color: 'white',
+//               padding: '8px',
+//               borderRadius: '50%',
+//               border: 'none',
+//               cursor: 'pointer'
+//             }}
+//           >
+//             <PiChatCircleSlashFill />
+//           </button>
+//         </div>
+//       )}
+//     </>
+//   );
+// };
 
-// Mount to body if running in storefront
-const mount = document.createElement('div');
-mount.id = 'chatbot-widget';
-document.body.appendChild(mount);
+// // Mount to body if running in storefront
+// const mount = document.createElement('div');
+// mount.id = 'chatbot-widget';
+// document.body.appendChild(mount);
 
-// React 18+
-ReactDOM.createRoot(document.getElementById('chatbot-widget')).render(<WidgetApp />);
+// // React 18+
+// ReactDOM.createRoot(document.getElementById('chatbot-widget')).render(<WidgetApp />);
