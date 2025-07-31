@@ -99,13 +99,6 @@ def get_shopify_context(shop_domain):
     finally:
         shopify.ShopifyResource.clear_session()
 
-                # =============== Shopify OAuth Flow ===============
-@app.route('/api/shopify/auth/callback')
-def shopify_auth_callback():
-    # ... your auth logic here
-    redirect_url = f"{os.getenv('APP_URL')}?shop={shop}&host={host}"
-    return redirect(redirect_url)
-
 # Routes
 @app.route('/')
 def root():
@@ -153,22 +146,67 @@ def install():
 
 
 
+# @app.route('/api/shopify/auth/callback')
+# def auth_callback():
+    # shop = request.args.get('shop')
+    # code = request.args.get('code')
+    # hmac_param = request.args.get('hmac')
+    
+    # # Validate required parameters
+    # if not all([shop, code, hmac_param]):
+    #     return jsonify({"error": "Missing required parameters"}), 400
+    
+    # # Validate HMAC
+    # if not validate_hmac(request.args):
+    #     return jsonify({"error": "Invalid HMAC"}), 403
+    
+    # try:
+    #     # 1. Get access token
+    #     token_url = f"https://{shop}/admin/oauth/access_token"
+    #     token_response = requests.post(token_url, json={
+    #         'client_id': SHOPIFY_API_KEY,
+    #         'client_secret': SHOPIFY_API_SECRET,
+    #         'code': code
+    #     })
+    #     token_response.raise_for_status()
+    #     access_token = token_response.json()['access_token']
+
+    #     # 2. Embed app in Shopify admin
+    #     embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+    #     requests.post(embed_url, json={
+    #         "script_tag": {
+    #             "src": f"https://chatbot-py-two.vercel.app/",
+    #             "event": "onload"
+    #         }
+    #     }, headers={
+    #         "X-Shopify-Access-Token": access_token
+    #     })
+
+    #     # 3. Redirect to app in admin
+    #     return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
+    
+    # except requests.exceptions.RequestException as e:
+    #     error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
+    #     print(f"OAuth Error: {error_data}")
+    #     return jsonify({
+    #         "error": "Installation failed", 
+    #         "details": error_data
+    #     }), 500
+
 @app.route('/api/shopify/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
     code = request.args.get('code')
     hmac_param = request.args.get('hmac')
-    
-    # Validate required parameters
+    host = request.args.get('host')  # ✅ Add this line
+
     if not all([shop, code, hmac_param]):
         return jsonify({"error": "Missing required parameters"}), 400
-    
-    # Validate HMAC
+
     if not validate_hmac(request.args):
         return jsonify({"error": "Invalid HMAC"}), 403
-    
+
     try:
-        # 1. Get access token
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
             'client_id': SHOPIFY_API_KEY,
@@ -178,62 +216,24 @@ def auth_callback():
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
 
-        # 2. Embed app in Shopify admin
-        embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-        requests.post(embed_url, json={
-            "script_tag": {
-                "src": f"https://chatbot-py-two.vercel.app/",
-                "event": "onload"
-            }
-        }, headers={
-            "X-Shopify-Access-Token": access_token
-        })
+        # Save the token
+        shops_db[shop] = {'access_token': access_token}
 
-        # 3. Redirect to app in admin
-        return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
-    
+        # Optional: Add script_tag
+        requests.post(
+            f"https://{shop}/admin/api/{SHOPIFY_API_VERSION}/script_tags.json",
+            json={"script_tag": {"src": "https://chatbot-py-two.vercel.app/", "event": "onload"}},
+            headers={"X-Shopify-Access-Token": access_token}
+        )
+
+        # ✅ Fix the redirect (shop & host are now defined)
+        redirect_url = f"{APP_URL}?shop={shop}&host={host}"
+        return redirect(redirect_url)
+
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
         print(f"OAuth Error: {error_data}")
-        return jsonify({
-            "error": "Installation failed", 
-            "details": error_data
-        }), 500
-
-# @app.route('/api/shopify/auth/callback', methods=['GET'])
-# def shopify_auth_callback():
-    # shop_url = request.args.get('shop')
-    # hmac_param = request.args.get('hmac')
-    
-    # if not verify_shopify_hmac(hmac_param, request.args):
-    #     return jsonify({"error": "HMAC verification failed"}), 401
-    
-    # try:
-    #     session = Session(shop_url, SHOPIFY_API_VERSION)
-    #     token = session.request_token(request.args)
-    #     shopify.ShopifyResource.activate_session(session)
-        
-    #     # Store shop and token
-    #     shops_db[shop_url] = {
-    #         'access_token': token,
-    #         'chat_history': [{
-    #             "sender": "bot",
-    #             "text": "Hello! I'm your Shopify AI assistant. How can I help?",
-    #             "time": datetime.datetime.now().strftime("%I:%M %p, %d %b %Y")
-    #         }]
-    #     }
-        
-    #     # Add script tag to load frontend
-    #     script_tag = shopify.ScriptTag(
-    #         event='onload',
-    #         src='https://chatbot-py-two.vercel.app/chatbot.js'  # Bundle your React app
-    #     )
-    #     script_tag.save()
-        
-    #     shopify.ShopifyResource.clear_session()
-    #     return redirect(f"https://{shop_url}/admin/apps/{SHOPIFY_API_KEY}")
-    # except Exception as e:
-    #     return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Installation failed", "details": error_data}), 500
 
 
 # In-memory chat history (replace with a database for production)
