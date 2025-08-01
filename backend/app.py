@@ -42,7 +42,7 @@ def serve_widget_js():
       toggleButton.style.right = '20px';
       toggleButton.style.width = '60px';
       toggleButton.style.height = '60px';
-      toggleButton.style.backgroundColor = 'purple';
+      toggleButton.style.backgroundColor = 'gray';
       toggleButton.style.borderRadius = '50%';
       toggleButton.style.border = 'none';
       toggleButton.style.cursor = 'pointer';
