@@ -17,15 +17,56 @@ app = Flask(__name__)
 def serve_widget_js():
     js_code = '''
     (function() {
-      // Create chat button
-      const chatButton = document.createElement("div");
-      chatButton.innerHTML = '<button style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background-color: purple; border-radius: 50%; border: none; cursor: pointer; color: white;">💬</button>';
-      document.body.appendChild(chatButton);
-
-      // Add click event to open chatbot in new tab
-      chatButton.querySelector("button").addEventListener("click", () => {
-        window.open("https://chatbot-py-two.vercel.app", "_blank");
+      // Create iframe container
+      const widgetContainer = document.createElement('div');
+      widgetContainer.id = 'chatbot-widget-container';
+      widgetContainer.style.position = 'fixed';
+      widgetContainer.style.bottom = '20px';
+      widgetContainer.style.right = '20px';
+      widgetContainer.style.zIndex = '99999';
+      
+      // Create iframe
+      const iframe = document.createElement('iframe');
+      iframe.src = 'https://chatbot-py-two.vercel.app';
+      iframe.style.border = 'none';
+      iframe.style.borderRadius = '8px';
+      iframe.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.transition = 'all 0.3s ease';
+      
+      // Create toggle button
+      const toggleButton = document.createElement('button');
+      toggleButton.innerHTML = '💬';
+      toggleButton.style.position = 'fixed';
+      toggleButton.style.bottom = '20px';
+      toggleButton.style.right = '20px';
+      toggleButton.style.width = '60px';
+      toggleButton.style.height = '60px';
+      toggleButton.style.backgroundColor = 'purple';
+      toggleButton.style.borderRadius = '50%';
+      toggleButton.style.border = 'none';
+      toggleButton.style.cursor = 'pointer';
+      toggleButton.style.color = 'white';
+      toggleButton.style.zIndex = '99999';
+      
+      // Toggle iframe visibility
+      let isOpen = false;
+      toggleButton.addEventListener('click', () => {
+        isOpen = !isOpen;
+        if (isOpen) {
+          iframe.style.width = '400px';
+          iframe.style.height = '600px';
+        } else {
+          iframe.style.width = '0';
+          iframe.style.height = '0';
+        }
       });
+      
+      // Append elements to DOM
+      widgetContainer.appendChild(iframe);
+      widgetContainer.appendChild(toggleButton);
+      document.body.appendChild(widgetContainer);
     })();
     '''
     return js_code, 200, {'Content-Type': 'application/javascript'}
