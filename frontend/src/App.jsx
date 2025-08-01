@@ -106,32 +106,12 @@ function App() {
   };
 
   return (
-    <div style={containerStyles} className="flex">
+    < >
       {/* Only show toggle button when not in iframe */}
-      {!isIframe && !isChatOpen && (
-        <button
-          onClick={toggleChat}
-          className="fixed bottom-5 right-5 bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-full shadow-lg transition-colors duration-200"
-        >
-          <SiWechat className="text-2xl" />
-        </button>
-      )}
-
-      {/* Chatbox - always visible in iframe, toggleable when standalone */}
-      {(isIframe || isChatOpen) && (
-        <div className={`${isIframe ? 'w-full h-full' : 'w-[90%] max-w-md fixed bottom-5 right-5'} flex flex-col items-end`}>
-          <Chatbox isIframe={isIframe} />
-          {!isIframe && (
-            <button
-              onClick={toggleChat}
-              className="mt-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors duration-200"
-            >
-              <PiChatCircleSlashFill />
-            </button>
-          )}
-        </div>
-      )}
-    </div>
+     
+          <Chatbox/>
+         
+    </>
   );
 }
 

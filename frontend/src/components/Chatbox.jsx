@@ -121,7 +121,7 @@ const ChatBox = () => {
     };
 
     return (
-        <div className="w-full h-[460px] max-h-[90vh] shadow-lg rounded-2xl overflow-hidden">
+        <div className="w-screen h-screen shadow-lg rounded-2xl overflow-hidden flex flex-col">
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-400 to-purple-600 text-white px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ const ChatBox = () => {
             </div>
 
             {/* Chat Window */}
-            <div className="h-80 overflow-y-auto px-4 py-2 space-y-3 bg-gray-50" style={{ scrollbarWidth: 'thin' }}>
+            <div className="w-full h-full overflow-y-auto px-4 py-2 space-y-3 bg-gray-50" style={{ scrollbarWidth: 'thin' }}>
                 {chat.map((msg, index) => (
                     <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div className="flex flex-col items-end gap-2 max-w-xs">
@@ -201,7 +201,7 @@ const ChatBox = () => {
             </div>
 
             {/* Input Area */}
-            <div className="border-t border-purple-400 bg-white p-3 flex items-center gap-2">
+            <div className="mt-auto w-full border-t border-purple-400 bg-white p-3 flex items-center gap-2">
                 <input
                     type="text"
                     placeholder="Type your message..."
