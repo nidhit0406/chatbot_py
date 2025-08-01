@@ -23,6 +23,11 @@ def serve_widget_js():
 
   const iframe = document.createElement("iframe");
   iframe.src = "https://chatbot-py-two.vercel.app";
+  iframe.style.position = "fixed";
+iframe.style.bottom = "20px";
+iframe.style.right = "20px";
+iframe.style.width = "300px";
+iframe.style.height = "500px";
  
   document.body.appendChild(iframe);
 
