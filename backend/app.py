@@ -27,7 +27,7 @@ def serve_widget_js():
       
       // Create iframe
       const iframe = document.createElement('iframe');
-      iframe.src = 'https://chatbot-py-ns-projects-f9f6ae0b.vercel.app';
+      iframe.src = 'https://chatbot-py-virid.vercel.app';
       iframe.style.border = 'none';
       iframe.style.borderRadius = '8px';
       iframe.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
