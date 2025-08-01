@@ -9,8 +9,11 @@ const ChatBox = () => {
     const [message, setMessage] = useState('');
     const [chat, setChat] = useState([]);
     const [isTyping, setIsTyping] = useState(false);
-    const messagesEndRef = useRef(null);
 
+    const messagesEndRef = useRef(null);
+    console.log(import.meta.env.VITE_APP_API_URL, "REACT_APP_API_URL");
+    
+  
     // Fetch initial messages from backend
 //    useEffect(() => {
 //     axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/api/messages`) // Update to match backend port
@@ -27,6 +30,8 @@ const ChatBox = () => {
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [chat, isTyping]);
+
+
 
     const sendMessage = async () => {
         if (message.trim() === '') return;

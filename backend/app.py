@@ -13,10 +13,107 @@ import shopify
 
 # Initialize Flask app
 app = Flask(__name__)
-# ✅ Add this near the bottom of the file:
+
+
+
 @app.route('/widget.js')
-def serve_widget():
-    return send_from_directory('static', 'widget.js')
+def serve_widget_js():
+    js_code = '''
+(function() {
+  if (window.ChatbotLoaded) return;
+  window.ChatbotLoaded = true;
+
+  const iframe = document.createElement("iframe");
+  iframe.src = "https://chatbot-iota-rose.vercel.app";
+  iframe.style.cssText = `
+    position: fixed;
+    bottom: 70px;
+    right: 20px;
+    width: 380px;
+    height: 0;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    z-index: 99999;
+    opacity: 0;
+    transform: translateY(20px);
+    transition:
+      height 0.3s ease-out,
+      opacity 0.2s ease-out,
+      transform 0.25s ease-out;
+    background: white;
+  `;
+  document.body.appendChild(iframe);
+
+  const btn = document.createElement('button');
+  btn.innerHTML = `
+    <span>💬 Chat</span>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-left: 8px; transition: transform 0.3s ease">
+      <path d="M19 9l-7 7-7-7" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  `;
+  btn.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    background: #5c6ac4;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(92,106,196,0.3);
+    transition:
+      background 0.2s ease,
+      transform 0.2s ease;
+  `;
+
+  let isOpen = false;
+  btn.onclick = () => {
+    isOpen = !isOpen;
+
+    if (isOpen) {
+      iframe.style.height = '500px';
+      iframe.style.opacity = '1';
+      iframe.style.transform = 'translateY(0)';
+      iframe.style.display = 'block';
+
+      btn.querySelector('svg').style.transform = 'rotate(180deg)';
+      btn.style.background = '#4a58b3';
+    } else {
+      iframe.style.height = '0';
+      iframe.style.opacity = '0';
+      iframe.style.transform = 'translateY(20px)';
+      btn.querySelector('svg').style.transform = 'rotate(0deg)';
+      btn.style.background = '#5c6ac4';
+      setTimeout(() => {
+        iframe.style.display = 'none';
+      }, 300);
+    }
+  };
+
+  btn.addEventListener('mouseenter', () => {
+    btn.style.transform = 'translateY(-2px)';
+    btn.style.boxShadow = '0 4px 12px rgba(92,106,196,0.4)';
+  });
+
+  btn.addEventListener('mouseleave', () => {
+    btn.style.transform = 'translateY(0)';
+    btn.style.boxShadow = '0 2px 10px rgba(92,106,196,0.3)';
+  });
+
+  document.body.appendChild(btn);
+})();
+    '''
+    return js_code, 200, {'Content-Type': 'application/javascript'}
+
+
+
+# ✅ Add this near the bottom of the file:
 # Configure CORS
 CORS(app, resources={
     r"/api/*": {
@@ -122,20 +219,6 @@ def root():
     <p>Or access via: <a href="/api/messages">Chat API</a></p>
     """
 
-# @app.route('/api/shopify/install', methods=['GET'])
-# def shopify_install():
-#     """Initiate Shopify app installation"""
-#     shop_url = request.args.get('shop')
-#     if not shop_url:
-#         return jsonify({"error": "Shop parameter missing"}), 400
-    
-#     session = Session(shop_url, SHOPIFY_API_VERSION)
-#     scope = ['read_products', 'write_products', 'read_orders']
-#     redirect_uri = f"{APP_URL}/api/shopify/auth/callback"
-#     permission_url = session.create_permission_url(scope, redirect_uri)
-    
-#     return redirect(permission_url)
-
 @app.route('/install')
 def install():
     shop = request.args.get('shop')
@@ -147,47 +230,6 @@ def install():
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
     return redirect(install_url)
 
-
-
-# @app.route('/api/shopify/auth/callback')
-# def auth_callback():
-#     shop = request.args.get('shop')
-#     code = request.args.get('code')
-#     hmac_param = request.args.get('hmac')
-    
-#     if not all([shop, code, hmac_param]):
-#         return jsonify({"error": "Missing required parameters"}), 400
-    
-#     if not validate_hmac(request.args):
-#         return jsonify({"error": "Invalid HMAC"}), 403
-    
-#     try:
-#         # Existing token retrieval logic...
-#         token_url = f"https://{shop}/admin/oauth/access_token"
-#         token_response = requests.post(token_url, json={
-#             'client_id': SHOPIFY_API_KEY,
-#             'client_secret': SHOPIFY_API_SECRET,
-#             'code': code
-#         })
-#         token_response.raise_for_status()
-#         access_token = token_response.json()['access_token']
-
-#         # Add or update script tag
-#         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-#         script_tag_response = requests.get(embed_url, headers={"X-Shopify-Access-Token": access_token})
-#         if script_tag_response.status_code == 200 and not any(tag["src"] == f"https://chatbot-bpy.clustersofttech.com/widget.js" for tag in script_tag_response.json().get("script_tags", [])):
-#             requests.post(embed_url, json={
-#                 "script_tag": {
-#                     "src": f"https://chatbot-bpy.clustersofttech.com/widget.js",
-#                     "event": "onload"
-#                 }
-#             }, headers={"X-Shopify-Access-Token": access_token})
-
-#         return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
-    
-#     except requests.exceptions.RequestException as e:
-#         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
-#         return jsonify({"error": "Installation failed", "details": error_data}), 500
 @app.route('/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
@@ -223,17 +265,6 @@ def auth_callback():
 }, headers={
     "X-Shopify-Access-Token": access_token
 })
-        # embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-        # requests.post(embed_url, json={
-        #     "script_tag": {
-        #         "src": f"https://chatbot-py-two.vercel.app/",
-        #         "event": "onload"
-        #     }
-        # }, headers={
-        #     "X-Shopify-Access-Token": access_token
-        # })
- 
-        # 3. Redirect to app in admin
         return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
     
     except requests.exceptions.RequestException as e:
