@@ -24,7 +24,7 @@ def serve_widget_js():
   window.ChatbotLoaded = true;
 
   const iframe = document.createElement("iframe");
-  iframe.src = "https://chatbot-iota-rose.vercel.app";
+  iframe.src = "https://chatbot-py-two.vercel.app";
   iframe.style.cssText = `
     position: fixed;
     bottom: 70px;
