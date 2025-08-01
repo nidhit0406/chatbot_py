@@ -13,28 +13,43 @@ import shopify
 
 # Initialize Flask app
 app = Flask(__name__)
-
-
-
 @app.route('/widget.js')
 def serve_widget_js():
     js_code = '''
-(function() {
+    (function() {
+      // Create chat button
+      const chatButton = document.createElement("div");
+      chatButton.innerHTML = '<button style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background-color: purple; border-radius: 50%; border: none; cursor: pointer; color: white;">💬</button>';
+      document.body.appendChild(chatButton);
 
-  const iframe = document.createElement("iframe");
-  iframe.src = "https://chatbot-py-two.vercel.app";
-  iframe.style.position = "fixed";
- iframe.style.bottom = "20px";
- iframe.style.right = "20px";
-iframe.style.backgroundColor = "red";
-iframe.style.width = "500px";
-iframe.style.height = "500px";
- 
-  document.body.appendChild(iframe);
-
-})();
+      // Add click event to open chatbot in new tab
+      chatButton.querySelector("button").addEventListener("click", () => {
+        window.open("https://chatbot-py-two.vercel.app", "_blank");
+      });
+    })();
     '''
     return js_code, 200, {'Content-Type': 'application/javascript'}
+
+
+# @app.route('/widget.js')
+# def serve_widget_js():
+#     js_code = '''
+# (function() {
+
+#   const iframe = document.createElement("iframe");
+#   iframe.src = "https://chatbot-py-two.vercel.app";
+#   iframe.style.position = "fixed";
+#  iframe.style.bottom = "20px";
+#  iframe.style.right = "20px";
+# iframe.style.backgroundColor = "red";
+# iframe.style.width = "500px";
+# iframe.style.height = "500px";
+ 
+#   document.body.appendChild(iframe);
+
+# })();
+#     '''
+#     return js_code, 200, {'Content-Type': 'application/javascript'}
 
 
 
