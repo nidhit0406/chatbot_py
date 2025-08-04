@@ -24,14 +24,17 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-const rootId = 'chatbot-widget-container';
+// ID MUST match loader.js
+const rootId = 'chatbot-widget-container'; 
 
+// Only initialize if not already loaded
 if (!document.getElementById(rootId)) {
   const container = document.createElement('div');
   container.id = rootId;
   document.body.appendChild(container);
 }
 
+// Mount React
 const container = document.getElementById(rootId);
 if (container) {
   createRoot(container).render(
@@ -40,5 +43,3 @@ if (container) {
     </React.StrictMode>
   );
 }
-
-

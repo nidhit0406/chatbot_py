@@ -36,15 +36,16 @@
 // vite.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
-import tailwindcss from '@tailwindcss/vite'
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [react(),  tailwindcss()],
+  plugins: [react(), tailwindcss()],
   build: {
+    outDir: 'dist',
     lib: {
       entry: './src/main.jsx',
       name: 'ChatbotWidget',
-      fileName: 'chatbot-widget',
+      fileName: 'chatbot-widget', // Generates chatbot-widget.js
       formats: ['iife']
     },
     rollupOptions: {
@@ -52,12 +53,14 @@ export default defineConfig({
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM'
-        }
+        },
+        // Ensures consistent filenames
+        entryFileNames: 'chatbot-widget.js',
+        assetFileNames: 'chatbot-widget.[ext]'
       }
     }
   }
 });
-
 
 
 
