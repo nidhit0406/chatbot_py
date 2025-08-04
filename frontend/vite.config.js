@@ -1,11 +1,11 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
-import tailwindcss from '@tailwindcss/vite'
+// import { defineConfig } from 'vite'
+// import react from '@vitejs/plugin-react-swc'
+// import tailwindcss from '@tailwindcss/vite'
 
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-})
+// // https://vite.dev/config/
+// export default defineConfig({
+//   plugins: [react(), tailwindcss()],
+// })
 // vite.config.js
 // import { defineConfig } from 'vite'
 // import react from '@vitejs/plugin-react-swc'
@@ -32,6 +32,32 @@ export default defineConfig({
 //     }
 //   }
 // })
+
+// vite.config.js
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react-swc';
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [react(),  tailwindcss()],
+  build: {
+    lib: {
+      entry: './src/main.jsx',
+      name: 'ChatbotWidget',
+      fileName: 'chatbot-widget',
+      formats: ['iife']
+    },
+    rollupOptions: {
+      output: {
+        globals: {
+          react: 'React',
+          'react-dom': 'ReactDOM'
+        }
+      }
+    }
+  }
+});
+
 
 
 

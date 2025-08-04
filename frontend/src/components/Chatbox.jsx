@@ -11,8 +11,7 @@ const ChatBox = () => {
     const [isTyping, setIsTyping] = useState(false);
 
     const messagesEndRef = useRef(null);
-    console.log(import.meta.env.VITE_APP_API_URL, "REACT_APP_API_URL");
-    
+   
   
     // Fetch initial messages from backend
 //    useEffect(() => {

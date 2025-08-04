@@ -13,62 +13,79 @@ import shopify
 
 # Initialize Flask app
 app = Flask(__name__)
-@app.route('/widget.js')
-def serve_widget_js():
-    js_code = '''
-    (function() {
-      // Create iframe container
-      const widgetContainer = document.createElement('div');
-      widgetContainer.id = 'chatbot-widget-container';
-      widgetContainer.style.position = 'fixed';
-      widgetContainer.style.bottom = '20px';
-      widgetContainer.style.right = '20px';
-      widgetContainer.style.zIndex = '99999';
+
+# @app.route('/widget.js')
+# def serve_widget_js():
+#     js_code = '''
+#     (function() {
+#       // Create iframe container
+#       const widgetContainer = document.createElement('div');
+#       widgetContainer.id = 'chatbot-widget-container';
+#       widgetContainer.style.position = 'fixed';
+#       widgetContainer.style.bottom = '20px';
+#       widgetContainer.style.right = '20px';
+#       widgetContainer.style.zIndex = '99999';
       
-      // Create iframe
-      const iframe = document.createElement('iframe');
-      iframe.src = 'https://chatbot-py-virid.vercel.app';
-      iframe.style.border = 'none';
-      iframe.style.borderRadius = '8px';
-      iframe.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.transition = 'all 0.3s ease';
+#       // Create iframe
+#       const iframe = document.createElement('iframe');
+#       iframe.src = 'https://chatbot-py-virid.vercel.app';
+#       iframe.style.border = 'none';
+#       iframe.style.borderRadius = '8px';
+#       iframe.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+#       iframe.style.width = '0';
+#       iframe.style.height = '0';
+#       iframe.style.transition = 'all 0.3s ease';
       
-      // Create toggle button
-      const toggleButton = document.createElement('button');
-      toggleButton.innerHTML = '💬';
-      toggleButton.style.bottom = '20px';
-      toggleButton.style.right = '20px';
-      toggleButton.style.width = '60px';
-      toggleButton.style.height = '60px';
-      toggleButton.style.backgroundColor = 'gray';
-      toggleButton.style.borderRadius = '50%';
-      toggleButton.style.border = 'none';
-      toggleButton.style.cursor = 'pointer';
-      toggleButton.style.color = 'white';
-      toggleButton.style.zIndex = '99999';
+#       // Create toggle button
+#       const toggleButton = document.createElement('button');
+#       toggleButton.innerHTML = '💬';
+#       toggleButton.style.bottom = '20px';
+#       toggleButton.style.right = '20px';
+#       toggleButton.style.width = '60px';
+#       toggleButton.style.height = '60px';
+#       toggleButton.style.backgroundColor = 'gray';
+#       toggleButton.style.borderRadius = '50%';
+#       toggleButton.style.border = 'none';
+#       toggleButton.style.cursor = 'pointer';
+#       toggleButton.style.color = 'white';
+#       toggleButton.style.zIndex = '99999';
       
-      // Toggle iframe visibility
-      let isOpen = false;
-      toggleButton.addEventListener('click', () => {
-        isOpen = !isOpen;
-        if (isOpen) {
-          iframe.style.width = '400px';
-          iframe.style.height = '600px';
-        } else {
-          iframe.style.width = '0';
-          iframe.style.height = '0';
-        }
-      });
+#       // Toggle iframe visibility
+#       let isOpen = false;
+#       toggleButton.addEventListener('click', () => {
+#         isOpen = !isOpen;
+#         if (isOpen) {
+#           iframe.style.width = '400px';
+#           iframe.style.height = '600px';
+#         } else {
+#           iframe.style.width = '0';
+#           iframe.style.height = '0';
+#         }
+#       });
       
-      // Append elements to DOM
-      widgetContainer.appendChild(iframe);
-      widgetContainer.appendChild(toggleButton);
-      document.body.appendChild(widgetContainer);
-    })();
-    '''
-    return js_code, 200, {'Content-Type': 'application/javascript'}
+#       // Append elements to DOM
+#       widgetContainer.appendChild(iframe);
+#       widgetContainer.appendChild(toggleButton);
+#       document.body.appendChild(widgetContainer);
+#     })();
+#     '''
+#     return js_code, 200, {'Content-Type': 'application/javascript'}
+
+def register_script_tag(shop_url, access_token):
+    session = shopify.Session(shop_url, access_token)
+    shopify.ShopifyResource.activate_session(session)
+
+    script_url = "https://chatbot-py-virid.vercel.app/chatbot-loader.js"
+
+    existing_tags = shopify.ScriptTag.find()
+    if not any(tag.src == script_url for tag in existing_tags):
+        shopify.ScriptTag.create({
+            "event": "onload",
+            "src": script_url
+        })
+
+    shopify.ShopifyResource.clear_session()
+
 
 
 # @app.route('/widget.js')
@@ -210,22 +227,65 @@ def install():
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
     return redirect(install_url)
 
+# @app.route('/auth/callback')
+# def auth_callback():
+#     shop = request.args.get('shop')
+#     code = request.args.get('code')
+#     hmac_param = request.args.get('hmac')
+    
+#     # Validate required parameters
+#     if not all([shop, code, hmac_param]):
+#         return jsonify({"error": "Missing required parameters"}), 400
+    
+#     # Validate HMAC
+#     if not validate_hmac(request.args):
+#         return jsonify({"error": "Invalid HMAC"}), 403
+    
+#     try:
+#         # 1. Get access token
+#         token_url = f"https://{shop}/admin/oauth/access_token"
+#         token_response = requests.post(token_url, json={
+#             'client_id': SHOPIFY_API_KEY,
+#             'client_secret': SHOPIFY_API_SECRET,
+#             'code': code
+#         })
+#         token_response.raise_for_status()
+#         access_token = token_response.json()['access_token']
+ 
+#         # 2. Embed app in Shopify admin
+#         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+#         requests.post(embed_url, json={
+#     "script_tag": {
+#         "src": f"https://chatbot-bpy.clustersofttech.com/widget.js",
+#         "event": "onload"
+#     }
+# }, headers={
+#     "X-Shopify-Access-Token": access_token
+# })
+#         return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
+    
+#     except requests.exceptions.RequestException as e:
+#         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
+#         print(f"OAuth Error: {error_data}")
+#         return jsonify({
+#             "error": "Installation failed",
+#             "details": error_data
+#         }), 500
+
 @app.route('/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
     code = request.args.get('code')
     hmac_param = request.args.get('hmac')
     
-    # Validate required parameters
     if not all([shop, code, hmac_param]):
         return jsonify({"error": "Missing required parameters"}), 400
     
-    # Validate HMAC
     if not validate_hmac(request.args):
         return jsonify({"error": "Invalid HMAC"}), 403
     
     try:
-        # 1. Get access token
+        # Get access token from Shopify
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
             'client_id': SHOPIFY_API_KEY,
@@ -234,26 +294,28 @@ def auth_callback():
         })
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
- 
-        # 2. Embed app in Shopify admin
-        embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-        requests.post(embed_url, json={
-    "script_tag": {
-        "src": f"https://chatbot-bpy.clustersofttech.com/widget.js",
-        "event": "onload"
-    }
-}, headers={
-    "X-Shopify-Access-Token": access_token
-})
+        
+        # Store it in memory (or DB)
+        shops_db[shop] = {
+            "access_token": access_token,
+            "chat_history": []
+        }
+
+        # ✅ Inject the ScriptTag
+        register_script_tag(shop, access_token)
+
+        # Redirect back to apps page
         return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
     
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
-        print(f"OAuth Error: {error_data}")
         return jsonify({
             "error": "Installation failed",
             "details": error_data
         }), 500
+
+
+
 chat_history = [
     {
         "sender": "bot",
