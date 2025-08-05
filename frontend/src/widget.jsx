@@ -15,12 +15,12 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import Chatbox from './components/Chatbox';
+import ChatBox from './components/Chatbox';
 
 (function () {
     const container = document.getElementById('chatbot-root');
     if (container) {
         const root = ReactDOM.createRoot(container);
-        root.render(<Chatbox />);
+        root.render(<ChatBox />);
     }
 })();
