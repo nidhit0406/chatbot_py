@@ -35,6 +35,7 @@ export default defineConfig({
     port: 5173,
     open: true,
   },
+  publicDir: 'public', // Ensures public/ is included in deployment
 });
 
 // vite.config.js
