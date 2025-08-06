@@ -1,11 +1,11 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
-import tailwindcss from '@tailwindcss/vite'
+// import { defineConfig } from 'vite'
+// import react from '@vitejs/plugin-react-swc'
+// import tailwindcss from '@tailwindcss/vite'
 
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-})
+// // https://vite.dev/config/
+// export default defineConfig({
+//   plugins: [react(), tailwindcss()],
+// })
 
 // import { defineConfig } from 'vite';
 // import react from '@vitejs/plugin-react-swc';
@@ -35,63 +35,21 @@ export default defineConfig({
 //     open: true,
 //   },
 // });
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
-// import { defineConfig } from 'vite';
-// import react from '@vitejs/plugin-react-swc';
-// import { resolve } from 'path';
-// import tailwindcss from '@tailwindcss/vite';
-
-// export default defineConfig({
-//    plugins: [react(), tailwindcss()],
-//   build: {
-//     lib: {
-//       entry: resolve(__dirname, 'widget.jsx'),
-//       name: 'ChatbotWidget',
-//       fileName: () => 'widget-bundle.js',
-//       formats: ['iife'],
-//     },
-//     rollupOptions: {
-//       external: [],
-//       output: {
-//         globals: {
-//           react: 'React',
-//           'react-dom': 'ReactDOM',
-//         },
-//       },
-//     },
-//   },
-//   server: {
-//     port: 5173,
-//     open: true,
-//   },
-// });
-
-// vite.config.js
-// import { defineConfig } from 'vite'
-// import react from '@vitejs/plugin-react-swc'
-// import tailwindcss from '@tailwindcss/vite'
-// import path from 'path'
-
-// export default defineConfig({
-//   plugins: [react(), tailwindcss()],
-//   build: {
-//     lib: {
-//       entry: path.resolve(__dirname, 'widget.jsx'),
-//       name: 'ChatbotWidget',
-//       fileName: () => 'widget.js',
-//       formats: ['iife'], // Needed for Shopify
-//     },
-//     rollupOptions: {
-//       external: [],
-//       output: {
-//         globals: {
-//           react: 'React',
-//           'react-dom': 'ReactDOM'
-//         }
-//       }
-//     }
-//   }
-// })
-
-
-
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',  // Changed from default 'assets' to match Vercel
+    rollupOptions: {
+      output: {
+        entryFileNames: `assets/js/[name].js`,
+        chunkFileNames: `assets/js/[name].js`,
+        assetFileNames: `assets/css/[name].[ext]`
+      }
+    }
+  },
+  base: '/assets/'  // Set base path
+})
