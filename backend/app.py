@@ -113,25 +113,24 @@ def serve_widget_js():
         document.body.appendChild(toggleBtn);
 
         // 6. Chatbot loader function
-       function loadChatbot() {
-            const version = Date.now(); // Cache busting
+      function loadChatbot() {
+            const version = Date.now();
             
-            // Load React
+            // Load React from CDN
             const reactScript = document.createElement('script');
             reactScript.src = 'https://unpkg.com/react@18.2.0/umd/react.production.min.js';
             
-            // Load ReactDOM
             const reactDomScript = document.createElement('script');
             reactDomScript.src = 'https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js';
             
-            // Load your app - UPDATED PATHS
+            // Load your app from root
             const appScript = document.createElement('script');
-            appScript.src = `https://chatbot-py-virid.vercel.app/assets/js/main.js?v=${version}`;
+            appScript.src = `https://chatbot-py-virid.vercel.app/main.js?v=${version}`;
             
-            // Load styles - UPDATED PATH
+            // Load styles from root
             const styles = document.createElement('link');
             styles.rel = 'stylesheet';
-            styles.href = `https://chatbot-py-virid.vercel.app/assets/css/main.css?v=${version}`;
+            styles.href = `https://chatbot-py-virid.vercel.app/main.css?v=${version}`;
             
             // Load in order
             document.head.appendChild(reactScript);

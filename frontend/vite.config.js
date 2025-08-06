@@ -41,15 +41,14 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: 'dist',
-    assetsDir: 'assets',  // Changed from default 'assets' to match Vercel
+    outDir: '../dist',  // Builds to parent directory
+    emptyOutDir: true,
     rollupOptions: {
       output: {
-        entryFileNames: `assets/js/[name].js`,
-        chunkFileNames: `assets/js/[name].js`,
-        assetFileNames: `assets/css/[name].[ext]`
+        entryFileNames: `[name].js`,
+        chunkFileNames: `[name].js`,
+        assetFileNames: `[name].[ext]`
       }
     }
-  },
-  base: '/assets/'  // Set base path
+  }
 })
