@@ -50,20 +50,20 @@
 // import Chatbox from './components/Chatbox';
 // import { PiChatCircleSlashFill } from "react-icons/pi";
 // import axios from 'axios';
- 
+
 // function App() {
 //   const [isChatOpen, setIsChatOpen] = useState(false);
 //   const [isIframe, setIsIframe] = useState(false);
- 
+
 //   // Detect if we're running in an iframe
 //   useEffect(() => {
 //     setIsIframe(window.self !== window.top);
 //   }, []);
- 
+
 //   const toggleChat = () => {
 //     setIsChatOpen(!isChatOpen);
 //   };
- 
+
 //   // Only initialize session if not in iframe
 //   const [sessionId, setSessionId] = useState('');
 //   useEffect(() => {
@@ -89,7 +89,7 @@
 //       getSessionId();
 //     }
 //   }, [isIframe]);
- 
+
 //   // Adjust styles based on iframe context
 //   const containerStyles = isIframe ? {
 //     width: '100%',
@@ -104,7 +104,7 @@
 //     alignItems: 'center',
 //     backgroundColor: '#f3f4f6'
 //   };
- 
+
 //   return (
 //     <div style={containerStyles} className="flex">
 //       {/* Only show toggle button when not in iframe */}
@@ -116,7 +116,7 @@
 //           <SiWechat className="text-2xl" />
 //         </button>
 //       )}
- 
+
 //       {/* Chatbox - always visible in iframe, toggleable when standalone */}
 //       {(isIframe || isChatOpen) && (
 //         <div className={`${isIframe ? 'w-full h-full' : 'w-[90%] max-w-md fixed bottom-5 right-5'} flex flex-col items-end`}>
@@ -134,7 +134,6 @@
 //     </div>
 //   );
 // }
- 
 // export default App;
 
 
@@ -152,43 +151,38 @@ function App() {
     setIsChatOpen(!isChatOpen);
   };
 
-       const [sessionId, setSessionId] = useState('');
-console.log(sessionId, "sessionId");  
-    useEffect(() => {
-        console.log('sessionId changed');
-        
-  const getSessionId = async () => {
-    let storedSessionId = localStorage.getItem('session_id');
-    if (storedSessionId) {
-      setSessionId(storedSessionId);
-    } else {
-      try {
-        // const response = await axios.post(`${import.meta.env.VITE_APP_API_URL}/create-session`, {}, {
-        //   headers: { 'Content-Type': 'application/json' },
-        // });
-        // const data = response.data;
-        // console.log(data, "data");
+  const [sessionId, setSessionId] = useState('');
+  console.log(sessionId, "sessionId");
+  useEffect(() => {
+    console.log('sessionId changed');
+    const getSessionId = async () => {
+      let storedSessionId = localStorage.getItem('session_id');
+      if (storedSessionId) {
+        setSessionId(storedSessionId);
+      } else {
+        try {
+          const response = await axios.post(`${import.meta.env.VITE_APP_API_URL}/create-session`, {}, {
+            headers: { 'Content-Type': 'application/json' },
+          });
+          const data = response.data;
+          console.log(data, "data");
 
-        const data = {
-          session_id : "dd716b04-5586-40b1-93bb-2ec1b7ef8935"
+          if (data.session_id) {
+            localStorage.setItem('session_id', data.session_id);
+            setSessionId(data.session_id);
+          } else {
+            console.warn('No session_id in response');
+            //   addMessage('Failed to initialize session. Please try again.', 'error');
+          }
+        } catch (error) {
+          console.error('Error fetching session_id:', error);
+          // addMessage('Unable to connect to session service. Please try again later.', 'error');
         }
-
-        if (data.session_id) {
-          localStorage.setItem('session_id', data.session_id);
-          setSessionId(data.session_id);
-        } else {
-          console.warn('No session_id in response');
-        //   addMessage('Failed to initialize session. Please try again.', 'error');
-        }
-      } catch (error) {
-        console.error('Error fetching session_id:', error);
-        // addMessage('Unable to connect to session service. Please try again later.', 'error');
       }
-    }
-  };
+    };
 
-  getSessionId();
-}, []);
+    getSessionId();
+  }, []);
 
 
   return (

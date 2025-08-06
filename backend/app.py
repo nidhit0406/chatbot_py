@@ -10,63 +10,224 @@ import json
 from urllib.parse import urlencode
 from shopify import Session, ShopifyResource
 import shopify
-
+#   (function() {
+#       // Create iframe container
+#       const widgetContainer = document.createElement('div');
+#       widgetContainer.id = 'chatbot-widget-container';
+#       widgetContainer.style.position = 'fixed';
+#       widgetContainer.style.bottom = '20px';
+#       widgetContainer.style.right = '20px';
+#       widgetContainer.style.zIndex = '99999';
+      
+#       // Create iframe
+#       const iframe = document.createElement('iframe');
+#       iframe.src = 'https://chatbot-py-virid.vercel.app';
+#       iframe.style.border = 'none';
+#       iframe.style.borderRadius = '8px';
+#       iframe.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+#       iframe.style.width = '0';
+#       iframe.style.height = '0';
+#       iframe.style.transition = 'all 0.3s ease';
+      
+#       // Create toggle button
+#       const toggleButton = document.createElement('button');
+#       toggleButton.innerHTML = '💬';
+#       toggleButton.style.bottom = '20px';
+#       toggleButton.style.right = '20px';
+#       toggleButton.style.width = '60px';
+#       toggleButton.style.height = '60px';
+#       toggleButton.style.backgroundColor = 'gray';
+#       toggleButton.style.borderRadius = '50%';
+#       toggleButton.style.border = 'none';
+#       toggleButton.style.cursor = 'pointer';
+#       toggleButton.style.color = 'white';
+#       toggleButton.style.zIndex = '99999';
+      
+#       // Toggle iframe visibility
+#       let isOpen = false;
+#       toggleButton.addEventListener('click', () => {
+#         isOpen = !isOpen;
+#         if (isOpen) {
+#           iframe.style.width = '400px';
+#           iframe.style.height = '600px';
+#         } else {
+#           iframe.style.width = '0';
+#           iframe.style.height = '0';
+#         }
+#       });
+      
+#       // Append elements to DOM
+#       widgetContainer.appendChild(iframe);
+#       widgetContainer.appendChild(toggleButton);
+#       document.body.appendChild(widgetContainer);
+#     })();
 # Initialize Flask app
 app = Flask(__name__)
 @app.route('/widget.js')
 def serve_widget_js():
     js_code = '''
-    (function() {
-      // Create iframe container
-      const widgetContainer = document.createElement('div');
-      widgetContainer.id = 'chatbot-widget-container';
-      widgetContainer.style.position = 'fixed';
-      widgetContainer.style.bottom = '20px';
-      widgetContainer.style.right = '20px';
-      widgetContainer.style.zIndex = '99999';
+  // Updated widget.js
+(function() {
+  // Create chat container
+  const chatContainer = document.createElement('div');
+  chatContainer.id = 'shopify-chatbot-container';
+  chatContainer.style.position = 'fixed';
+  chatContainer.style.bottom = '20px';
+  chatContainer.style.right = '20px';
+  chatContainer.style.zIndex = '99999';
+  chatContainer.style.width = '350px';
+  chatContainer.style.height = '500px';
+  chatContainer.style.display = 'none'; // Initially hidden
+  chatContainer.style.backgroundColor = 'white';
+  chatContainer.style.borderRadius = '12px';
+  chatContainer.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+  chatContainer.style.overflow = 'hidden';
+  
+  // Create toggle button
+  const toggleButton = document.createElement('button');
+  toggleButton.innerHTML = '💬';
+  toggleButton.style.position = 'fixed';
+  toggleButton.style.bottom = '20px';
+  toggleButton.style.right = '20px';
+  toggleButton.style.width = '60px';
+  toggleButton.style.height = '60px';
+  toggleButton.style.backgroundColor = '#6d28d9'; // Purple color
+  toggleButton.style.borderRadius = '50%';
+  toggleButton.style.border = 'none';
+  toggleButton.style.cursor = 'pointer';
+  toggleButton.style.color = 'white';
+  chatContainer.style.fontSize = '24px';
+  toggleButton.style.zIndex = '99999';
+  
+  // Toggle chat visibility
+  let isChatOpen = false;
+  toggleButton.addEventListener('click', () => {
+    isChatOpen = !isChatOpen;
+    chatContainer.style.display = isChatOpen ? 'block' : 'none';
+  });
+  
+  // Chat UI structure
+  chatContainer.innerHTML = `
+    <div style="height: 100%; display: flex; flex-direction: column;">
+      <!-- Header -->
+      <div style="background: linear-gradient(to right, #8b5cf6, #7c3aed); color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+          </svg>
+          <div>
+            <div style="font-weight: 600; font-size: 16px;">AI Assistant</div>
+            <div style="font-size: 11px; opacity: 0.8;">● Online</div>
+          </div>
+        </div>
+        <button id="chatbot-clear" style="background: none; border: none; color: white; cursor: pointer;">
+          <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+          </svg>
+        </button>
+      </div>
       
-      // Create iframe
-      const iframe = document.createElement('iframe');
-      iframe.src = 'https://chatbot-py-virid.vercel.app';
-      iframe.style.border = 'none';
-      iframe.style.borderRadius = '8px';
-      iframe.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.transition = 'all 0.3s ease';
+      <!-- Messages container -->
+      <div id="chatbot-messages" style="flex: 1; overflow-y: auto; padding: 16px; background: #f9fafb;"></div>
       
-      // Create toggle button
-      const toggleButton = document.createElement('button');
-      toggleButton.innerHTML = '💬';
-      toggleButton.style.bottom = '20px';
-      toggleButton.style.right = '20px';
-      toggleButton.style.width = '60px';
-      toggleButton.style.height = '60px';
-      toggleButton.style.backgroundColor = 'gray';
-      toggleButton.style.borderRadius = '50%';
-      toggleButton.style.border = 'none';
-      toggleButton.style.cursor = 'pointer';
-      toggleButton.style.color = 'white';
-      toggleButton.style.zIndex = '99999';
+      <!-- Input area -->
+      <div style="border-top: 1px solid #e5e7eb; padding: 12px; background: white; display: flex; gap: 8px;">
+        <input 
+          id="chatbot-input" 
+          type="text" 
+          placeholder="Type your message..." 
+          style="flex: 1; border: 1px solid #d1d5db; border-radius: 9999px; padding: 8px 16px; outline: none; font-size: 14px;"
+        >
+        <button 
+          id="chatbot-send" 
+          style="background: #7c3aed; color: white; border: none; border-radius: 9999px; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; cursor: pointer;"
+        >
+          <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  `;
+  
+  // Append elements to DOM
+  document.body.appendChild(chatContainer);
+  document.body.appendChild(toggleButton);
+  
+  // Chat functionality
+  const messagesContainer = document.getElementById('chatbot-messages');
+  const inputField = document.getElementById('chatbot-input');
+  const sendButton = document.getElementById('chatbot-send');
+  const clearButton = document.getElementById('chatbot-clear');
+  
+  // Add initial bot message
+  addMessage('Hello! How can I help you today?', 'bot');
+  
+  // Send message function
+  function sendMessage() {
+    const message = inputField.value.trim();
+    if (message) {
+      addMessage(message, 'user');
+      inputField.value = '';
       
-      // Toggle iframe visibility
-      let isOpen = false;
-      toggleButton.addEventListener('click', () => {
-        isOpen = !isOpen;
-        if (isOpen) {
-          iframe.style.width = '400px';
-          iframe.style.height = '600px';
-        } else {
-          iframe.style.width = '0';
-          iframe.style.height = '0';
-        }
-      });
-      
-      // Append elements to DOM
-      widgetContainer.appendChild(iframe);
-      widgetContainer.appendChild(toggleButton);
-      document.body.appendChild(widgetContainer);
-    })();
+      // Simulate bot response (replace with actual API call)
+      setTimeout(() => {
+        addMessage('I received your message. This is a simulated response.', 'bot');
+      }, 1000);
+    }
+  }
+  
+  // Add message to chat
+  function addMessage(text, sender) {
+    const messageDiv = document.createElement('div');
+    messageDiv.style.marginBottom = '12px';
+    messageDiv.style.display = 'flex';
+    messageDiv.style.flexDirection = 'column';
+    messageDiv.style.alignItems = sender === 'user' ? 'flex-end' : 'flex-start';
+    
+    const bubble = document.createElement('div');
+    bubble.style.padding = '8px 12px';
+    bubble.style.borderRadius = '12px';
+    bubble.style.maxWidth = '80%';
+    bubble.style.fontSize = '14px';
+    
+    if (sender === 'user') {
+      bubble.style.background = '#7c3aed';
+      bubble.style.color = 'white';
+      bubble.style.borderBottomRightRadius = '0';
+    } else {
+      bubble.style.background = 'white';
+      bubble.style.color = '#1f2937';
+      bubble.style.borderBottomLeftRadius = '0';
+      bubble.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
+    }
+    
+    bubble.textContent = text;
+    messageDiv.appendChild(bubble);
+    
+    // Add timestamp
+    const timeDiv = document.createElement('div');
+    timeDiv.style.fontSize = '11px';
+    timeDiv.style.color = '#6b7280';
+    timeDiv.style.marginTop = '4px';
+    timeDiv.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    messageDiv.appendChild(timeDiv);
+    
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+  
+  // Event listeners
+  sendButton.addEventListener('click', sendMessage);
+  inputField.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+  
+  clearButton.addEventListener('click', () => {
+    messagesContainer.innerHTML = '';
+    addMessage('Hello! How can I help you today?', 'bot');
+  });
+})();
     '''
     return js_code, 200, {'Content-Type': 'application/javascript'}
 
