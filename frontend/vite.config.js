@@ -1,11 +1,11 @@
-// import { defineConfig } from 'vite'
-// import react from '@vitejs/plugin-react-swc'
-// import tailwindcss from '@tailwindcss/vite'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react-swc'
+import tailwindcss from '@tailwindcss/vite'
 
-// // https://vite.dev/config/
-// export default defineConfig({
-//   plugins: [react(), tailwindcss()],
-// })
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+})
 
 // import { defineConfig } from 'vite';
 // import react from '@vitejs/plugin-react-swc';
@@ -35,21 +35,21 @@
 //     open: true,
 //   },
 // });
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+// import { defineConfig } from 'vite'
+// import react from '@vitejs/plugin-react'
 
-export default defineConfig({
-  plugins: [react()],
-  build: {
-    outDir: 'dist',  // Explicit output directory
-    emptyOutDir: true,
-    rollupOptions: {
-      output: {
-        entryFileNames: 'assets/[name].js',
-        chunkFileNames: 'assets/[name].js',
-        assetFileNames: 'assets/[name].[ext]'
-      }
-    }
-  },
-  publicDir: 'public'  // Ensure public directory exists
-})
+// export default defineConfig({
+//   plugins: [react()],
+//   build: {
+//     outDir: 'dist',  // Explicit output directory
+//     emptyOutDir: true,
+//     rollupOptions: {
+//       output: {
+//         entryFileNames: 'assets/[name].js',
+//         chunkFileNames: 'assets/[name].js',
+//         assetFileNames: 'assets/[name].[ext]'
+//       }
+//     }
+//   },
+//   publicDir: 'public'  // Ensure public directory exists
+// })

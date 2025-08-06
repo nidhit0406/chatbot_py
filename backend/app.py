@@ -66,83 +66,56 @@ app = Flask(__name__)
 @app.route('/widget.js')
 def serve_widget_js():
     js_code = '''
-   (function() {
-        // 1. Only load on your Shopify store
-        if (!window.location.hostname.includes('myshopify.com')) {
-            return;
+    (function() {
+      // Create iframe container
+      const widgetContainer = document.createElement('div');
+      widgetContainer.id = 'chatbot-widget-container';
+      widgetContainer.style.position = 'fixed';
+      widgetContainer.style.bottom = '20px';
+      widgetContainer.style.right = '20px';
+      widgetContainer.style.zIndex = '99999';
+      
+      // Create iframe
+      const iframe = document.createElement('iframe');
+      iframe.src = 'https://chatbot-py-virid.vercel.app';
+      iframe.style.border = 'none';
+      iframe.style.borderRadius = '8px';
+      iframe.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.transition = 'all 0.3s ease';
+      
+      // Create toggle button
+      const toggleButton = document.createElement('button');
+      toggleButton.innerHTML = '💬';
+      toggleButton.style.bottom = '20px';
+      toggleButton.style.right = '20px';
+      toggleButton.style.width = '60px';
+      toggleButton.style.height = '60px';
+      toggleButton.style.backgroundColor = 'gray';
+      toggleButton.style.borderRadius = '50%';
+      toggleButton.style.border = 'none';
+      toggleButton.style.cursor = 'pointer';
+      toggleButton.style.color = 'white';
+      toggleButton.style.zIndex = '99999';
+      
+      // Toggle iframe visibility
+      let isOpen = false;
+      toggleButton.addEventListener('click', () => {
+        isOpen = !isOpen;
+        if (isOpen) {
+          iframe.style.width = '400px';
+          iframe.style.height = '600px';
+        } else {
+          iframe.style.width = '0';
+          iframe.style.height = '0';
         }
-
-        // 2. Create container for chat
-        const container = document.createElement('div');
-        container.id = 'shopify-chatbot-container';
-        container.style.position = 'fixed';
-        container.style.bottom = '20px';
-        container.style.right = '20px';
-        container.style.zIndex = '99999';
-        container.style.display = 'none';
-
-        // 3. Create toggle button
-        const toggleBtn = document.createElement('button');
-        toggleBtn.innerHTML = '💬';
-        toggleBtn.style.position = 'fixed';
-        toggleBtn.style.bottom = '20px';
-        toggleBtn.style.right = '20px';
-        toggleBtn.style.width = '60px';
-        toggleBtn.style.height = '60px';
-        toggleBtn.style.backgroundColor = '#6d28d9';
-        toggleBtn.style.borderRadius = '50%';
-        toggleBtn.style.border = 'none';
-        toggleBtn.style.cursor = 'pointer';
-        toggleBtn.style.color = 'white';
-        toggleBtn.style.fontSize = '24px';
-        toggleBtn.style.zIndex = '99999';
-
-        // 4. Toggle functionality
-        let isOpen = false;
-        toggleBtn.addEventListener('click', function() {
-            isOpen = !isOpen;
-            container.style.display = isOpen ? 'block' : 'none';
-            
-            if (isOpen && !window.chatbotLoaded) {
-                loadChatbot();
-            }
-        });
-
-        // 5. Append elements to page
-        document.body.appendChild(container);
-        document.body.appendChild(toggleBtn);
-
-        // 6. Chatbot loader function
-      function loadChatbot() {
-            const version = Date.now();
-            
-            // Load React from CDN
-            const reactScript = document.createElement('script');
-            reactScript.src = 'https://unpkg.com/react@18.2.0/umd/react.production.min.js';
-            
-            const reactDomScript = document.createElement('script');
-            reactDomScript.src = 'https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js';
-            
-            // Load your app from root
-            const appScript = document.createElement('script');
-            appScript.src = `https://chatbot-py-virid.vercel.app/main.js?v=${version}`;
-            
-            // Load styles from root
-            const styles = document.createElement('link');
-            styles.rel = 'stylesheet';
-            styles.href = `https://chatbot-py-virid.vercel.app/main.css?v=${version}`;
-            
-            // Load in order
-            document.head.appendChild(reactScript);
-            reactScript.onload = () => {
-                document.head.appendChild(reactDomScript);
-                reactDomScript.onload = () => {
-                    document.head.appendChild(styles);
-                    document.head.appendChild(appScript);
-                    window.chatbotLoaded = true;
-                };
-            };
-        }
+      });
+      
+      // Append elements to DOM
+      widgetContainer.appendChild(iframe);
+      widgetContainer.appendChild(toggleButton);
+      document.body.appendChild(widgetContainer);
     })();
     '''
     return js_code, 200, {'Content-Type': 'application/javascript'}
