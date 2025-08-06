@@ -66,83 +66,82 @@ app = Flask(__name__)
 @app.route('/widget.js')
 def serve_widget_js():
     js_code = '''
- (function() {
-    // Create container for React app
-    const appContainer = document.createElement('div');
-    appContainer.id = 'shopify-chatbot-root';
-    appContainer.style.position = 'fixed';
-    appContainer.style.bottom = '20px';
-    appContainer.style.right = '20px';
-    appContainer.style.zIndex = '99999';
-    appContainer.style.display = 'none';
-    
-    // Create toggle button
-    const toggleButton = document.createElement('button');
-    toggleButton.innerHTML = '💬';
-    toggleButton.style.position = 'fixed';
-    toggleButton.style.bottom = '20px';
-    toggleButton.style.right = '20px';
-    toggleButton.style.width = '60px';
-    toggleButton.style.height = '60px';
-    toggleButton.style.backgroundColor = '#6d28d9';
-    toggleButton.style.borderRadius = '50%';
-    toggleButton.style.border = 'none';
-    toggleButton.style.cursor = 'pointer';
-    toggleButton.style.color = 'white';
-    toggleButton.style.fontSize = '24px';
-    toggleButton.style.zIndex = '99999';
-
-    // Toggle visibility
-    let isOpen = false;
-    toggleButton.addEventListener('click', () => {
-        isOpen = !isOpen;
-        appContainer.style.display = isOpen ? 'block' : 'none';
-        if (isOpen && !window.shopifyChatbotMounted) {
-            loadReactChatbot();
+   (function() {
+        // 1. Only load on your Shopify store
+        if (!window.location.hostname.includes('myshopify.com')) {
+            return;
         }
-    });
 
-    // Append to DOM
-    document.body.appendChild(appContainer);
-    document.body.appendChild(toggleButton);
+        // 2. Create container for chat
+        const container = document.createElement('div');
+        container.id = 'shopify-chatbot-container';
+        container.style.position = 'fixed';
+        container.style.bottom = '20px';
+        container.style.right = '20px';
+        container.style.zIndex = '99999';
+        container.style.display = 'none';
 
-    // Function to load React app
-    function loadReactChatbot() {
-        // Create style tag for animations
-        const styleTag = document.createElement('style');
-        styleTag.textContent = `
-            @keyframes pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.5; }
+        // 3. Create toggle button
+        const toggleBtn = document.createElement('button');
+        toggleBtn.innerHTML = '💬';
+        toggleBtn.style.position = 'fixed';
+        toggleBtn.style.bottom = '20px';
+        toggleBtn.style.right = '20px';
+        toggleBtn.style.width = '60px';
+        toggleBtn.style.height = '60px';
+        toggleBtn.style.backgroundColor = '#6d28d9';
+        toggleBtn.style.borderRadius = '50%';
+        toggleBtn.style.border = 'none';
+        toggleBtn.style.cursor = 'pointer';
+        toggleBtn.style.color = 'white';
+        toggleBtn.style.fontSize = '24px';
+        toggleBtn.style.zIndex = '99999';
+
+        // 4. Toggle functionality
+        let isOpen = false;
+        toggleBtn.addEventListener('click', function() {
+            isOpen = !isOpen;
+            container.style.display = isOpen ? 'block' : 'none';
+            
+            if (isOpen && !window.chatbotLoaded) {
+                loadChatbot();
             }
-        `;
-        document.head.appendChild(styleTag);
-        
-        // Create script tag for React runtime
-        const runtimeScript = document.createElement('script');
-        runtimeScript.src = 'https://unpkg.com/react@18/umd/react.production.min.js';
-        runtimeScript.crossOrigin = 'anonymous';
-        
-        // Create script tag for React DOM
-        const reactDomScript = document.createElement('script');
-        reactDomScript.src = 'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js';
-        reactDomScript.crossOrigin = 'anonymous';
-        
-        // Create script tag for your React component
-        const mainScript = document.createElement('script');
-        mainScript.src = 'http://localhost:5173/src/main.jsx';
-        
-        // Load dependencies
-        document.head.appendChild(runtimeScript);
-        runtimeScript.onload = () => {
-            document.head.appendChild(reactDomScript);
-            reactDomScript.onload = () => {
-                document.head.appendChild(mainScript);
-                window.shopifyChatbotMounted = true;
+        });
+
+        // 5. Append elements to page
+        document.body.appendChild(container);
+        document.body.appendChild(toggleBtn);
+
+        // 6. Chatbot loader function
+        function loadChatbot() {
+            // Load React dependencies
+            const reactScript = document.createElement('script');
+            reactScript.src = 'https://unpkg.com/react@18.2.0/umd/react.production.min.js';
+            
+            const reactDomScript = document.createElement('script');
+            reactDomScript.src = 'https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js';
+            
+            // Load YOUR chatbot component
+            const chatbotScript = document.createElement('script');
+            chatbotScript.src = 'https://chatbot-py-virid.vercel.app/static/js/main.js';
+            
+            // Load styles
+            const styles = document.createElement('link');
+            styles.rel = 'stylesheet';
+            styles.href = 'https://chatbot-py-virid.vercel.app/static/css/main.css';
+            
+            // Load in proper order
+            document.head.appendChild(reactScript);
+            reactScript.onload = function() {
+                document.head.appendChild(reactDomScript);
+                reactDomScript.onload = function() {
+                    document.head.appendChild(styles);
+                    document.head.appendChild(chatbotScript);
+                    window.chatbotLoaded = true;
+                };
             };
-        };
-    }
-})();
+        }
+    })();
     '''
     return js_code, 200, {'Content-Type': 'application/javascript'}
 
