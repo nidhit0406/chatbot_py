@@ -65,7 +65,14 @@ import shopify
 app = Flask(__name__)
 @app.route('/widget.js')
 def serve_widget_js():
-    return send_from_directory(os.path.join(app.root_path, 'static'), 'chatbot-widget.js')
+    return send_from_directory(
+        os.path.join(app.root_path, 'static'),
+        'chatbot-widget.js',
+        mimetype='application/javascript',
+        # Cache control (disable during development)
+        cache_timeout=0 if app.debug else 86400
+    )
+
 
 
 # @app.route('/widget.js')
