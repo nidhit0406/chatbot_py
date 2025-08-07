@@ -625,7 +625,8 @@ def auth_callback():
         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
         requests.post(embed_url, json={
     "script_tag": {
-        "src": f"https://chatbot-bpy.clustersofttech.com/widget.js",
+        # "src": f"https://chatbot-bpy.clustersofttech.com/widget.js",
+          "src": f"{APP_URL}/widget.js",
         "event": "onload"
     }
 }, headers={
