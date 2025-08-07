@@ -66,7 +66,7 @@ app = Flask(__name__)
 @app.route('/widget.js')
 def serve_widget_js():
     js_code = '''
-    (function() {
+   (function() {
         // Create widget container
         const widget = document.createElement('div');
         widget.id = 'shopify-chatbot-widget';
@@ -83,6 +83,7 @@ def serve_widget_js():
         widget.style.flexDirection = 'column';
         widget.style.overflow = 'hidden';
         widget.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+        widget.style.transition = 'all 0.3s ease';
 
         // Header
         const header = document.createElement('div');
@@ -197,6 +198,7 @@ def serve_widget_js():
         toggleButton.style.display = 'flex';
         toggleButton.style.alignItems = 'center';
         toggleButton.style.justifyContent = 'center';
+        toggleButton.style.transition = 'all 0.2s ease';
         
         // Build widget
         widget.appendChild(header);
@@ -219,6 +221,26 @@ def serve_widget_js():
         // Chat state
         let chatMessages = [];
         let isLoading = false;
+        
+        // Toggle functionality
+        let isChatVisible = false;
+        
+        function toggleChat() {
+            isChatVisible = !isChatVisible;
+            widget.style.display = isChatVisible ? 'flex' : 'none';
+            toggleButton.innerHTML = isChatVisible ? '✕' : '💬';
+            
+            // Add animation class when opening
+            if (isChatVisible) {
+                widget.style.animation = 'fadeIn 0.3s ease forwards';
+                setTimeout(() => input.focus(), 300);
+            }
+            
+            // Add initial message when first opened
+            if (isChatVisible && chatMessages.length === 0) {
+                addMessage("Hello! How can I help you today?", false);
+            }
+        }
         
         // Add message to UI
         function addMessage(text, isUser) {
@@ -256,9 +278,7 @@ def serve_widget_js():
             
             const content = document.createElement('div');
             content.style.padding = '8px 12px';
-            content.style.borderRadius = isUser 
-                ? '12px 12px 0 12px' 
-                : '12px 12px 12px 0';
+            content.style.borderRadius = isUser ? '12px 12px 0 12px' : '12px 12px 12px 0';
             content.style.background = isUser ? '#8b5cf6' : '#f3f4f6';
             content.style.color = isUser ? 'white' : '#1f2937';
             content.style.wordBreak = 'break-word';
@@ -292,8 +312,6 @@ def serve_widget_js():
             
             message.appendChild(meta);
             messages.appendChild(message);
-            
-            // Scroll to bottom
             messages.scrollTop = messages.scrollHeight;
             
             // Store message
@@ -392,7 +410,9 @@ def serve_widget_js():
         function clearChat() {
             messages.innerHTML = '';
             chatMessages = [];
-            addMessage("Hello! How can I help you today?", false);
+            if (isChatVisible) {
+                addMessage("Hello! How can I help you today?", false);
+            }
         }
         
         // Event listeners
@@ -408,15 +428,8 @@ def serve_widget_js():
             }
         });
         
-        toggleButton.addEventListener('click', () => {
-            widget.style.display = widget.style.display === 'none' ? 'flex' : 'none';
-            toggleButton.style.display = widget.style.display === 'none' ? 'flex' : 'none';
-        });
-        
-        closeButton.addEventListener('click', () => {
-            widget.style.display = 'none';
-            toggleButton.style.display = 'flex';
-        });
+        toggleButton.addEventListener('click', toggleChat);
+        closeButton.addEventListener('click', toggleChat);
         
         // Add animation style
         const style = document.createElement('style');
@@ -425,13 +438,19 @@ def serve_widget_js():
                 0%, 100% { transform: translateY(0); }
                 50% { transform: translateY(-4px); }
             }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            #chatbot-toggle:hover {
+                transform: scale(1.1);
+            }
         `;
         document.head.appendChild(style);
         
-        // Initial greeting
-        widget.style.display = 'flex';
-        toggleButton.style.display = 'none';
-        addMessage("Hello! How can I help you today?", false);
+        // Initial state
+        widget.style.display = 'none';
+        toggleButton.style.display = 'flex';
     })();
     '''
     return js_code, 200, {'Content-Type': 'application/javascript'}
