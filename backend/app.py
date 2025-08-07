@@ -202,7 +202,6 @@ def root():
     <p>Install this app via your Shopify Admin</p>
     <p>Or access via: <a href="/api/messages">Chat API</a></p>
     """
-
 @app.route('/install')
 def install():
     shop = request.args.get('shop')
@@ -210,7 +209,7 @@ def install():
         return "Shop parameter missing", 400
     
     scopes = 'write_script_tags,read_products'
-    redirect_uri = f"{APP_URL}/auth/callback"  # Fixed syntax
+    redirect_uri = f"{APP_URL}/auth/callback"
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
     return redirect(install_url)
 
@@ -220,13 +219,9 @@ def auth_callback():
     code = request.args.get('code')
     hmac_param = request.args.get('hmac')
     
-    # Validate required parameters
-    if not all([shop, code, hmac_param]):
-        return jsonify({"error": "Missing required parameters"}), 400
-    
-    # Validate HMAC
+    # Validate HMAC first
     if not validate_hmac(request.args):
-        return jsonify({"error": "Invalid HMAC"}), 403
+        return "Invalid HMAC signature", 403
     
     try:
         # 1. Get access token
@@ -238,26 +233,94 @@ def auth_callback():
         })
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
- 
-        # 2. Embed app in Shopify admin
-        embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-        requests.post(embed_url, json={
-    "script_tag": {
-        "src": f"https://chatbot-bpy.clustersofttech.com/widget.js",
-        "event": "onload"
-    }
-}, headers={
-    "X-Shopify-Access-Token": access_token
-})
+        
+        # 2. Install script tag with cache-busting parameter
+        script_tag_url = f"https://{shop}/admin/api/{SHOPIFY_API_VERSION}/script_tags.json"
+        script_response = requests.post(script_tag_url, json={
+            "script_tag": {
+                "src": f"{APP_URL}/widget.js?t={int(time.time())}",  # Cache buster
+                "event": "onload",
+                "display_scope": "online_store"  # Explicitly set to storefront
+            }
+        }, headers={
+            "X-Shopify-Access-Token": access_token,
+            "Content-Type": "application/json"
+        })
+        
+        if script_response.status_code != 201:
+            error_msg = f"Script tag installation failed: {script_response.text}"
+            print(error_msg)
+            return error_msg, 500
+        
+        # 3. Verify installation
+        verify_response = requests.get(
+            f"https://{shop}/admin/api/{SHOPIFY_API_VERSION}/script_tags.json",
+            headers={"X-Shopify-Access-Token": access_token}
+        )
+        
+        print("Installed script tags:", verify_response.json())
+        
         return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
+        
+    except Exception as e:
+        error_msg = f"Installation error: {str(e)}"
+        print(error_msg)
+        return error_msg, 500
+# @app.route('/install')
+# def install():
+#     shop = request.args.get('shop')
+#     if not shop:
+#         return "Shop parameter missing", 400
     
-    except requests.exceptions.RequestException as e:
-        error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
-        print(f"OAuth Error: {error_data}")
-        return jsonify({
-            "error": "Installation failed",
-            "details": error_data
-        }), 500
+#     scopes = 'write_script_tags,read_products'
+#     redirect_uri = f"{APP_URL}/auth/callback"  # Fixed syntax
+#     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
+#     return redirect(install_url)
+
+# @app.route('/auth/callback')
+# def auth_callback():
+#     shop = request.args.get('shop')
+#     code = request.args.get('code')
+#     hmac_param = request.args.get('hmac')
+    
+#     # Validate required parameters
+#     if not all([shop, code, hmac_param]):
+#         return jsonify({"error": "Missing required parameters"}), 400
+    
+#     # Validate HMAC
+#     if not validate_hmac(request.args):
+#         return jsonify({"error": "Invalid HMAC"}), 403
+    
+#     try:
+#         # 1. Get access token
+#         token_url = f"https://{shop}/admin/oauth/access_token"
+#         token_response = requests.post(token_url, json={
+#             'client_id': SHOPIFY_API_KEY,
+#             'client_secret': SHOPIFY_API_SECRET,
+#             'code': code
+#         })
+#         token_response.raise_for_status()
+#         access_token = token_response.json()['access_token']
+ 
+#         # 2. Embed app in Shopify admin
+#         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+#         requests.post(embed_url, json={
+#     "script_tag": {
+#         "src": f"https://chatbot-bpy.clustersofttech.com/widget.js",
+#         "event": "onload"
+#     }
+# }, headers={
+#     "X-Shopify-Access-Token": access_token
+# })
+#         return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
+    
+#     except requests.exceptions.RequestException as e:
+#         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
+#         print(f"OAuth Error: {error_data}")
+#         return jsonify({
+#             "error": "Installation failed",
+#             "details": error_data
+#         }), 500
 chat_history = [
     {
         "sender": "bot",
