@@ -205,14 +205,19 @@ def serve_widget_js():
         document.body.appendChild(widget);
         document.body.appendChild(toggleButton);
         
-        // API Configuration
-        const apiBaseUrl = "http://103.39.131.9:8050";
-        const chatApiUrl = apiBaseUrl + "/webhook/api/ask";
-        const sessionApiUrl = apiBaseUrl + "/create-session";
+        // Store configuration
         const storeId = "116";
+        const apiUrl = "https://n8nflow.byteztech.in/webhook/api/ask";
         
-        // Session Management
-        let sessionId = localStorage.getItem('session_id');
+        // Session management
+        let sessionId = localStorage.getItem('chatbot_session_id');
+        if (!sessionId) {
+            sessionId = 'session-' + Math.random().toString(36).substring(2, 15);
+            localStorage.setItem('chatbot_session_id', sessionId);
+        }
+        
+        // Chat state
+        let chatMessages = [];
         let isLoading = false;
         
         // Add message to UI
@@ -251,7 +256,9 @@ def serve_widget_js():
             
             const content = document.createElement('div');
             content.style.padding = '8px 12px';
-            content.style.borderRadius = isUser ? '12px 12px 0 12px' : '12px 12px 12px 0';
+            content.style.borderRadius = isUser 
+                ? '12px 12px 0 12px' 
+                : '12px 12px 12px 0';
             content.style.background = isUser ? '#8b5cf6' : '#f3f4f6';
             content.style.color = isUser ? 'white' : '#1f2937';
             content.style.wordBreak = 'break-word';
@@ -285,7 +292,16 @@ def serve_widget_js():
             
             message.appendChild(meta);
             messages.appendChild(message);
+            
+            // Scroll to bottom
             messages.scrollTop = messages.scrollHeight;
+            
+            // Store message
+            chatMessages.push({
+                text: text,
+                sender: isUser ? 'user' : 'bot',
+                time: realTime
+            });
         }
         
         // Show loading indicator
@@ -313,102 +329,69 @@ def serve_widget_js():
             
             messages.appendChild(loading);
             messages.scrollTop = messages.scrollHeight;
+            
             return loading;
         }
         
         // Hide loading indicator
         function hideLoading() {
             const loading = document.getElementById('chatbot-loading');
-            if (loading) loading.remove();
-        }
-        
-        // Initialize session
-        async function initializeSession() {
-            if (sessionId) {
-                console.log("Using existing session:", sessionId);
-                return sessionId;
-            }
-            
-            try {
-                console.log("Creating new session at:", sessionApiUrl);
-                const response = await fetch(sessionApiUrl, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ store_id: storeId })
-                });
-                
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                
-                const data = await response.json();
-                console.log("Session response:", data);
-                
-                if (data.session_id) {
-                    sessionId = data.session_id;
-                    localStorage.setItem('session_id', sessionId);
-                    return sessionId;
-                } else {
-                    throw new Error("No session_id in response");
-                }
-            } catch (error) {
-                console.error("Session error:", error);
-                addMessage("Failed to initialize chat. Please refresh.", false);
-                return null;
+            if (loading) {
+                loading.remove();
             }
         }
         
         // Send message to API
         async function sendMessage(messageText) {
-            const currentSessionId = await initializeSession();
-            if (!currentSessionId || !messageText.trim()) return;
+            if (!messageText.trim() || !sessionId) {
+                if (!sessionId) {
+                    addMessage('No session ID available. Please try again.', false);
+                }
+                return;
+            }
             
             addMessage(messageText, true);
             input.value = '';
-            isLoading = true;
+            
             const loading = showLoading();
+            isLoading = true;
             
             try {
-                console.log("Sending to:", chatApiUrl);
-                const response = await fetch(chatApiUrl, {
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Accept': 'application/json'
                     },
                     body: JSON.stringify({
                         question: messageText,
-                        sessionId: currentSessionId,
+                        sessionId: sessionId,
                         Store_id: storeId
                     })
                 });
                 
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                if (!response.ok) throw new Error('API request failed');
                 
                 const data = await response.json();
-                console.log("API response:", data);
+                let botReply = 'Sorry, I could not understand the response.';
                 
-                let botReply = "Sorry, I couldn't process your request.";
                 if (data && Array.isArray(data) && data[0]?.output) {
                     botReply = data[0].output;
-                } else if (data?.message) {
-                    botReply = data.message;
                 }
                 
                 addMessage(botReply, false);
             } catch (error) {
-                console.error("API Error:", error);
-                addMessage("Sorry, I'm having connection issues. Please try again.", false);
+                console.error('Chat error:', error);
+                addMessage("Sorry, I'm having trouble connecting. Please try again later.", false);
             } finally {
-                isLoading = false;
                 hideLoading();
+                isLoading = false;
             }
         }
         
         // Clear chat history
         function clearChat() {
             messages.innerHTML = '';
+            chatMessages = [];
             addMessage("Hello! How can I help you today?", false);
         }
         
@@ -445,12 +428,10 @@ def serve_widget_js():
         `;
         document.head.appendChild(style);
         
-        // Initialize
+        // Initial greeting
         widget.style.display = 'flex';
         toggleButton.style.display = 'none';
-        initializeSession().then(() => {
-            addMessage("Hello! How can I help you today?", false);
-        });
+        addMessage("Hello! How can I help you today?", false);
     })();
     '''
     return js_code, 200, {'Content-Type': 'application/javascript'}
