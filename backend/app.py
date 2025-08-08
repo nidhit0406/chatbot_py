@@ -75,7 +75,7 @@ def serve_widget_js():
   
   const config = {
     apiUrl: currentScript.getAttribute('data-api-url') || "https://n8nflow.byteztech.in/webhook/api/ask",
-    sessionApiUrl: currentScript.getAttribute('data-session-api-url') || "https://your-api.com/create-session",
+    sessionApiUrl:"http://103.39.131.9:8050/create-session",
     storeId: currentScript.getAttribute('data-store-id') || "116",
     welcomeMessage: currentScript.getAttribute('data-welcome-message') || "Hello! How can I help you today?",
     primaryColor: currentScript.getAttribute('data-primary-color') || "#8B5CF6",
