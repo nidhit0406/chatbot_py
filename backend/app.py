@@ -67,23 +67,24 @@ app = Flask(__name__)
 def serve_widget_js():
     js_code = '''
 // chatbot-widget.js
+// chatbot-widget.js
 (function() {
-  // 1. Get configuration from script attributes
+  // 1. Configuration - Get settings from script attributes
   const currentScript = document.currentScript || 
     Array.from(document.getElementsByTagName('script')).pop();
   
   const config = {
     apiUrl: currentScript.getAttribute('data-api-url') || "https://n8nflow.byteztech.in/webhook/api/ask",
-    sessionApiUrl: currentScript.getAttribute('data-session-api-url') || "https://default-api.com/create-session",
+    sessionApiUrl: currentScript.getAttribute('data-session-api-url') || "http://103.39.131.9:8050/create-session",
     storeId: currentScript.getAttribute('data-store-id') || "116",
     welcomeMessage: currentScript.getAttribute('data-welcome-message') || "Hello! How can I help you today?",
     primaryColor: currentScript.getAttribute('data-primary-color') || "#8B5CF6",
     secondaryColor: currentScript.getAttribute('data-secondary-color') || "#6D28D9",
     widgetTitle: currentScript.getAttribute('data-widget-title') || "AI Assistant",
-    position: currentScript.getAttribute('data-position') || "right" // 'left' or 'right'
+    position: currentScript.getAttribute('data-position') || "right"
   };
 
-  // 2. Create widget container
+  // 2. Create UI Elements
   const widget = document.createElement('div');
   widget.id = 'shopify-chatbot-widget';
   widget.style.position = 'fixed';
@@ -101,7 +102,7 @@ def serve_widget_js():
   widget.style.fontFamily = 'system-ui, -apple-system, sans-serif';
   widget.style.transition = 'all 0.3s ease';
 
-  // 3. Create header with configurable colors
+  // Header with configurable colors
   const header = document.createElement('div');
   header.style.display = 'flex';
   header.style.alignItems = 'center';
@@ -110,7 +111,7 @@ def serve_widget_js():
   header.style.background = `linear-gradient(to right, ${config.primaryColor}, ${config.secondaryColor})`;
   header.style.color = 'white';
   
-  // Header title with icon
+  // Header title
   const headerTitle = document.createElement('div');
   headerTitle.style.display = 'flex';
   headerTitle.style.alignItems = 'center';
@@ -126,7 +127,6 @@ def serve_widget_js():
   const titleText = document.createElement('span');
   titleText.textContent = config.widgetTitle;
   titleText.style.fontWeight = '600';
-  
   headerTitle.appendChild(botIcon);
   headerTitle.appendChild(titleText);
   
@@ -142,11 +142,10 @@ def serve_widget_js():
       <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
     </svg>
   `;
-  
   header.appendChild(headerTitle);
   header.appendChild(closeButton);
   
-  // 4. Messages container
+  // Messages container
   const messages = document.createElement('div');
   messages.id = 'chatbot-messages';
   messages.style.flex = '1';
@@ -157,7 +156,7 @@ def serve_widget_js():
   messages.style.gap = '12px';
   messages.style.background = '#f9fafb';
   
-  // 5. Input area
+  // Input area
   const inputArea = document.createElement('div');
   inputArea.style.padding = '12px 16px';
   inputArea.style.borderTop = '1px solid #e5e7eb';
@@ -191,11 +190,10 @@ def serve_widget_js():
   sendButton.style.alignItems = 'center';
   sendButton.style.justifyContent = 'center';
   sendButton.style.cursor = 'pointer';
-  
   inputArea.appendChild(input);
   inputArea.appendChild(sendButton);
   
-  // 6. Toggle button
+  // Toggle button
   const toggleButton = document.createElement('button');
   toggleButton.id = 'chatbot-toggle';
   toggleButton.innerHTML = '💬';
@@ -216,42 +214,62 @@ def serve_widget_js():
   toggleButton.style.justifyContent = 'center';
   toggleButton.style.transition = 'all 0.2s ease';
   
-  // 7. Build widget
+  // Build widget
   widget.appendChild(header);
   widget.appendChild(messages);
   widget.appendChild(inputArea);
   document.body.appendChild(widget);
   document.body.appendChild(toggleButton);
   
-  // 8. Session management
-  let sessionId = localStorage.getItem('chatbot_session_id');
+  // 3. Session Management
+  let sessionId = null;
   let chatMessages = [];
   let isLoading = false;
   let isChatVisible = false;
-  
+
+  // Get or create session ID
   async function initializeSession() {
-    if (!sessionId) {
-      try {
-        const response = await fetch(config.sessionApiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        const data = await response.json();
-        sessionId = data.session_id || 'session-' + Math.random().toString(36).substring(2, 15);
+    // Check localStorage first
+    const storedSessionId = localStorage.getItem('chatbot_session_id');
+    
+    if (storedSessionId) {
+      sessionId = storedSessionId;
+      return;
+    }
+
+    // If not in localStorage, fetch from API
+
+    try {
+      const response = await fetch(config.sessionApiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      log('config.sessionApiUrl:', config.sessionApiUrl);
+      log('Session API response:', response);
+      
+      if (!response.ok) throw new Error('Failed to get session ID');
+      
+      const data = await response.json();
+      
+      if (data.session_id) {
+        sessionId = data.session_id;
+        log('Session ID:', sessionId);
         localStorage.setItem('chatbot_session_id', sessionId);
-      } catch (error) {
-        console.error('Session init error:', error);
-        sessionId = 'session-' + Math.random().toString(36).substring(2, 15);
-        localStorage.setItem('chatbot_session_id', sessionId);
+      } else {
+        throw new Error('No session_id in response');
       }
+    } catch (error) {
+      console.error('Error getting session ID:', error);
+      // Fallback: generate a local session ID
+      sessionId = 'local-' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('chatbot_session_id', sessionId);
     }
   }
-  
-  // 9. Initialize session
+
+  // Initialize session when widget loads
   initializeSession();
-  
-  // 10. Toggle functionality
+
+  // 4. Chat Functions
   function toggleChat() {
     isChatVisible = !isChatVisible;
     widget.style.display = isChatVisible ? 'flex' : 'none';
@@ -266,16 +284,12 @@ def serve_widget_js():
       addMessage(config.welcomeMessage, false);
     }
   }
-  
-  // 11. Add message to UI
+
   function addMessage(text, isUser) {
     const realTime = new Date().toLocaleString('en-IN', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true,
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
+      hour12: true
     });
     
     const message = document.createElement('div');
@@ -343,8 +357,7 @@ def serve_widget_js():
       time: realTime
     });
   }
-  
-  // 12. Loading indicators
+
   function showLoading() {
     const loading = document.createElement('div');
     loading.id = 'chatbot-loading';
@@ -371,17 +384,23 @@ def serve_widget_js():
     messages.scrollTop = messages.scrollHeight;
     return loading;
   }
-  
+
   function hideLoading() {
     const loading = document.getElementById('chatbot-loading');
     if (loading) loading.remove();
   }
-  
-  // 13. Send message to API
+
+  // 5. API Communication
   async function sendMessage(messageText) {
-    if (!messageText.trim() || !sessionId) {
-      if (!sessionId) addMessage('No session ID available. Please try again.', false);
-      return;
+    if (!messageText.trim()) return;
+    
+    // Ensure we have a session ID
+    if (!sessionId) {
+      await initializeSession();
+      if (!sessionId) {
+        addMessage('Unable to start chat session. Please try again.', false);
+        return;
+      }
     }
     
     addMessage(messageText, true);
@@ -396,7 +415,7 @@ def serve_widget_js():
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: messageText,
-          sessionId: sessionId,
+          sessionId: sessionId,  // Passing the sessionId to API
           Store_id: config.storeId
         })
       });
@@ -419,8 +438,8 @@ def serve_widget_js():
       isLoading = false;
     }
   }
-  
-  // 14. Event listeners
+
+  // 6. Event Listeners
   sendButton.addEventListener('click', () => {
     if (input.value.trim() && !isLoading) sendMessage(input.value);
   });
@@ -432,7 +451,7 @@ def serve_widget_js():
   toggleButton.addEventListener('click', toggleChat);
   closeButton.addEventListener('click', toggleChat);
   
-  // 15. Add animation styles
+  // 7. Add animation styles
   const style = document.createElement('style');
   style.textContent = `
     @keyframes bounce {
@@ -449,7 +468,7 @@ def serve_widget_js():
   `;
   document.head.appendChild(style);
   
-  // 16. Initial state
+  // 8. Initial state
   widget.style.display = 'none';
   toggleButton.style.display = 'flex';
 })();

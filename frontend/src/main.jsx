@@ -12,6 +12,8 @@ const config = {
   forceRedirect: true,
 };
 console.log('Shopify config:', config);
+console.log(`${import.meta.env.VITE_APP_API_URL}/create-session`, "API URL");
+
 
 
 createRoot(document.getElementById('root')).render(
