@@ -213,6 +213,7 @@ def serve_widget_js():
         
         // Session management
         let sessionId = localStorage.getItem('chatbot_session_id');
+        console.log('Session ID:', sessionId);
         if (!sessionId) {
             sessionId = 'session-' + Math.random().toString(36).substring(2, 15);
             localStorage.setItem('chatbot_session_id', sessionId);
