@@ -75,7 +75,7 @@ def serve_widget_js():
   
   const config = {
     apiUrl: currentScript.getAttribute('data-api-url') || "https://n8nflow.byteztech.in/webhook/api/ask",
-    sessionApiUrl: currentScript.getAttribute('data-session-api-url') || "http://103.39.131.9:8050/create-session",
+    sessionApiUrl: currentScript.getAttribute('data-session-api-url') || "https://your-api.com/create-session",
     storeId: currentScript.getAttribute('data-store-id') || "116",
     welcomeMessage: currentScript.getAttribute('data-welcome-message') || "Hello! How can I help you today?",
     primaryColor: currentScript.getAttribute('data-primary-color') || "#8B5CF6",
@@ -227,47 +227,46 @@ def serve_widget_js():
   let isLoading = false;
   let isChatVisible = false;
 
-  // Get or create session ID
-  async function initializeSession() {
-    // Check localStorage first
+  // Get or create session ID from API
+  async function getSessionId() {
+    // First check localStorage
     const storedSessionId = localStorage.getItem('chatbot_session_id');
-    
     if (storedSessionId) {
-      sessionId = storedSessionId;
-      return;
+      return storedSessionId;
     }
 
     // If not in localStorage, fetch from API
-
     try {
       const response = await fetch(config.sessionApiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      log('config.sessionApiUrl:', config.sessionApiUrl);
-      log('Session API response:', response);
       
       if (!response.ok) throw new Error('Failed to get session ID');
       
       const data = await response.json();
       
       if (data.session_id) {
-        sessionId = data.session_id;
-        log('Session ID:', sessionId);
-        localStorage.setItem('chatbot_session_id', sessionId);
+        // Store the API-provided session ID
+        localStorage.setItem('chatbot_session_id', data.session_id);
+        return data.session_id;
       } else {
         throw new Error('No session_id in response');
       }
     } catch (error) {
       console.error('Error getting session ID:', error);
       // Fallback: generate a local session ID
-      sessionId = 'local-' + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('chatbot_session_id', sessionId);
+      const fallbackId = 'session-' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('chatbot_session_id', fallbackId);
+      return fallbackId;
     }
   }
 
   // Initialize session when widget loads
-  initializeSession();
+  (async function init() {
+    sessionId = await getSessionId();
+    console.log('Initialized with session ID:', sessionId);
+  })();
 
   // 4. Chat Functions
   function toggleChat() {
@@ -396,7 +395,7 @@ def serve_widget_js():
     
     // Ensure we have a session ID
     if (!sessionId) {
-      await initializeSession();
+      sessionId = await getSessionId();
       if (!sessionId) {
         addMessage('Unable to start chat session. Please try again.', false);
         return;
