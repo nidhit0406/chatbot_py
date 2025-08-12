@@ -153,18 +153,19 @@
   document.body.appendChild(toggleButton);
   
   // 3. Session Management
-  let sessionId = null;
-  let chatMessages = [];
-  let isLoading = false;
-  let isChatVisible = false;
+// 3. Session Management
+let sessionId = null;
+let chatMessages = [];
+let isLoading = false;
+let isChatVisible = false;
 
   // Get or create session ID from API
   async function getSessionId() {
     // First check localStorage
-    const storedSessionId = localStorage.getItem('chatbot_session_id');
-    if (storedSessionId) {
-      return storedSessionId;
-    }
+    // const storedSessionId = localStorage.getItem('chatbot_session_id');
+    // if (storedSessionId) {
+    //   return storedSessionId;
+    // }
 
     // If not in localStorage, fetch from API
     try {

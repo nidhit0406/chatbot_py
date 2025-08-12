@@ -51,7 +51,7 @@ import shopify
 #           iframe.style.width = '400px';
 #           iframe.style.height = '600px';
 #         } else {
-#           iframe.style.width = '0';
+#           iframe.style.width = '0';   
 #           iframe.style.height = '0';
 #         }
 #       });
