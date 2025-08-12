@@ -162,10 +162,10 @@ let isChatVisible = false;
   // Get or create session ID from API
   async function getSessionId() {
     // First check localStorage
-    // const storedSessionId = localStorage.getItem('chatbot_session_id');
-    // if (storedSessionId) {
-    //   return storedSessionId;
-    // }
+    const storedSessionId = localStorage.getItem('chatbot_session_id');
+    if (storedSessionId) {
+      return storedSessionId;
+    }
 
     // If not in localStorage, fetch from API
     try {
