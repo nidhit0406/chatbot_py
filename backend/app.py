@@ -8,8 +8,7 @@ import hmac
 import hashlib
 import json
 from urllib.parse import urlencode
-from shopify import Session, ShopifyResource
-from flask_jwt_extended import get_jwt_identity
+from shopify import Session
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import urllib.parse
@@ -245,20 +244,16 @@ def auth_callback():
         # 2. Embed app in Shopify admin
         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
         requests.post(embed_url, json={
-            "script_tag": {
-                "src": f"{APP_URL}/widget.js",
-                "event": "onload"
-            }
-        }, headers={
-            "X-Shopify-Access-Token": access_token
-        })
-        
-        # 3. Store access token in shops_db
-        shops_db[shop] = {'access_token': access_token, 'chat_history': []}
-
-        # 4. Redirect to /post-auth with shop and token as query parameters
-        return redirect(f'/post-auth?shop={shop}&token={access_token}')
-
+    "script_tag": {
+        # "src": f"https://chatbot-bpy.clustersofttech.com/widget.js",
+          "src": f"{APP_URL}/widget.js",
+        "event": "onload"
+    }
+}, headers={
+    "X-Shopify-Access-Token": access_token
+})
+        return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
+    
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
         print(f"OAuth Error: {error_data}")
@@ -266,103 +261,6 @@ def auth_callback():
             "error": "Installation failed",
             "details": error_data
         }), 500
-
-# New route to handle /post-auth
-@app.route('/post-auth')
-def post_auth():
-    shop = request.args.get('shop')
-    access_token = request.args.get('token')
-    
-    if not shop or not access_token:
-        return "Missing shop or token", 400
-
-    try:
-        # Call /trainlist API (assuming it needs the shop context or token)
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-
-        # Simulate a call to /trainlist with the shop context (adjust based on your needs)
-        session = Session(shop, SHOPIFY_API_VERSION)
-        session.token = access_token
-        shopify.ShopifyResource.activate_session(session)
-        
-        shop_data = shopify.Shop.current().to_dict()
-        cursor.execute(
-            "INSERT INTO shops (shop_domain, access_token, shop_data) VALUES (%s, %s, %s) "
-            "ON CONFLICT (shop_domain) DO UPDATE SET access_token = EXCLUDED.access_token, "
-            "shop_data = EXCLUDED.shop_data",
-            (shop, access_token, json.dumps(shop_data))
-        )
-        conn.commit()
-
-        # Optionally call /trainlist for the client (if tied to a user)
-        # This assumes /trainlist needs a client_id; adjust logic as per your JWT or shop mapping
-        cursor.execute("SELECT id AS client_id FROM client WHERE shop_domain = %s", (shop,))
-        client = cursor.fetchone()
-        if client:
-            trainlist_response = get_trainlist_logic(client['client_id'], shop)
-            conn.close()
-            # Redirect to Shopify admin after processing
-            return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
-        else:
-            conn.close()
-            return "Client not found for this shop", 404
-
-    except Exception as e:
-        print(f"Error in post-auth: {e}")
-        return jsonify({"message": "Error occurred, please try again."}), 500
-
-def get_trainlist_logic(client_id, shop):
-    # Mock implementation of /trainlist logic
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=RealDictCursor)
-
-    cursor.execute("SELECT id AS store_id, name FROM store WHERE client_id = %s", (client_id,))
-    stores = cursor.fetchall()
-
-    cursor.execute(
-        """
-        SELECT id AS training_id, created_at, store_id, file_jsonl, jsonl_status, 
-               file_id, model_id, status, error_message, try, client_id
-        FROM training
-        WHERE client_id = %s
-        """,
-        (client_id,)
-    )
-    training_records = cursor.fetchall()
-    conn.close()
-
-    grouped_trainings = {}
-    for record in training_records:
-        store_id = record["store_id"]
-        if store_id not in grouped_trainings:
-            grouped_trainings[store_id] = []
-        grouped_trainings[store_id].append({
-            "training_id": record["training_id"],
-            "created_at": record["created_at"].isoformat() if record["created_at"] else None,
-            "store_id": record["store_id"],
-            "file_jsonl": record["file_jsonl"],
-            "jsonl_status": record["jsonl_status"],
-            "file_id": record["file_id"],
-            "model_id": record["model_id"],
-            "status": record["status"],
-            "error_message": record["error_message"],
-            "try": record["try"],
-            "client_id": record["client_id"]
-        })
-
-    return {
-        "client_id": client_id,
-        "shop": shop,
-        "stores": [
-            {
-                "store_id": store["store_id"],
-                "name": store["name"],
-                "trainings": grouped_trainings.get(store["store_id"], [])
-            }
-            for store in stores
-        ]
-    }
 chat_history = [
     {
         "sender": "bot",
