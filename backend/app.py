@@ -9,10 +9,6 @@ import hashlib
 import json
 from urllib.parse import urlencode
 from shopify import Session
-import psycopg2
-from psycopg2.extras import RealDictCursor
-import urllib.parse
-from dotenv import load_dotenv
 import shopify
 #   (function() {
 #       // Create iframe container
@@ -105,13 +101,6 @@ CORS(app, resources={
         "expose_headers": ["Content-Type"]
     }
 })
-password = "Dcmh#2026"
-escaped_password = urllib.parse.quote_plus(password)
-DATABASE_URI = f'postgresql://shopifyai:{escaped_password}@103.39.131.9:5432/shopifyai'
-# Load environment variables
-load_dotenv()
-def get_db_connection():
-    return psycopg2.connect(DATABASE_URI, cursor_factory=RealDictCursor)
 
 # Configuration
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
