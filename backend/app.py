@@ -10,6 +10,11 @@ import json
 from urllib.parse import urlencode
 from shopify import Session
 import shopify
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity , get_jwt
+import urllib.parse
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
 #   (function() {
 #       // Create iframe container
 #       const widgetContainer = document.createElement('div');
@@ -114,6 +119,16 @@ APP_URL = os.getenv("APP_URL")
 # Database simulation
 shops_db = {}  # {shop_domain: {access_token: str, chat_history: list}}
 products_db = {}  # {shop_domain: [product1, product2...]}
+
+# Database Connection Setup
+password = "Dcmh#2026"
+escaped_password = urllib.parse.quote_plus(password)
+
+# Setup PostgreSQL connection details with escaped password
+DATABASE_URI = f'postgresql://shopifyai:{escaped_password}@103.39.131.9:5432/shopifyai'
+
+def get_db_connection():
+    return psycopg2.connect(DATABASE_URI, cursor_factory=RealDictCursor)
 
 # Helper Functions
 # def verify_shopify_hmac(hmac_param, query_params):
@@ -320,6 +335,80 @@ def clear_messages():
         }
     ]
     return jsonify({"status": "success", "message": "Chat history cleared"})
+
+@app.route('/trainlist', methods=['GET'])
+def get_trainlist():
+    store_id = request.args.get('store_id')  # Get store_id from query parameters
+    
+    if not store_id:
+        return jsonify({"message": "store_id parameter is required!"}), 400
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Fetch store details
+        cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE id = %s", (store_id,))
+        store = cursor.fetchone()
+
+        if not store:
+            conn.close()
+            return jsonify({"message": "Store not found!"}), 404
+
+        # Fetch client details
+        cursor.execute("SELECT id AS client_id, email, created_at FROM client WHERE id = %s", (store["client_id"],))
+        client = cursor.fetchone()
+
+        if not client:
+            conn.close()
+            return jsonify({"message": "Client not found!"}), 404
+
+        # Fetch all training records for the given store_id
+        cursor.execute(
+            """
+            SELECT id AS training_id, created_at, store_id, file_jsonl, jsonl_status, 
+                   file_id, model_id, status, error_message, try, client_id, is_running, website_url
+            FROM training
+            WHERE store_id = %s
+            ORDER BY created_at DESC
+            """,
+            (store_id,)
+        )
+        training_records = cursor.fetchall()
+        conn.close()
+
+        return jsonify({
+            "client_id": client["client_id"],
+            "email": client["email"],
+            "created_at": client["created_at"].isoformat() if client["created_at"] else None,
+            "store": {
+                "store_id": store["store_id"],
+                "name": store["name"],
+            },
+            "trainings": [
+                {
+                    "training_id": record["training_id"],
+                    "created_at": record["created_at"].isoformat() if record["created_at"] else None,
+                    "store_id": record["store_id"],
+                    "file_jsonl": record["file_jsonl"],
+                    "jsonl_status": record["jsonl_status"],
+                    "file_id": record["file_id"],
+                    "model_id": record["model_id"],
+                    "status": record["status"],
+                    "error_message": record["error_message"],
+                    "try": record["try"],
+                    "client_id": record["client_id"],
+                    "is_running": record["is_running"],
+                    "website_url": record["website_url"]
+                }
+                for record in training_records
+            ]
+        }), 200
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"message": "Error occurred, please try again."}), 500
+
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 5000))  # Use Render's assigned port
