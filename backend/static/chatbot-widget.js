@@ -421,8 +421,11 @@
     position: currentScript.getAttribute('data-position') || "right"
   };
 
+  console.log("apiUrl:", config.apiUrl);
+  
+
   // 2. Check if trainings exist before showing chatbot
-  fetch(`http://localhost:5000/trainlist?store_id=${config.storeId}`)
+  fetch(`${config.apiUrl}/trainlist?store_id=${config.storeId}`)
     .then(res => res.json())
     .then(data => {
       if (data.trainings && data.trainings.length > 0) {
