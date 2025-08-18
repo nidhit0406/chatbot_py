@@ -425,7 +425,7 @@
   
 
   // 2. Check if trainings exist before showing chatbot
-  fetch(`${config.apiUrl}/trainlist?store_id=${config.storeId}`)
+  fetch(`https://chatbot-bpy.clustersofttech.com/trainlist?store_id=${config.storeId}`)
     .then(res => res.json())
     .then(data => {
       if (data.trainings && data.trainings.length > 0) {
