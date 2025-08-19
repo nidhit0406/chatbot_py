@@ -413,7 +413,7 @@
   const config = {
     apiUrl: currentScript.getAttribute('data-api-url') || "https://n8nflow.byteztech.in/webhook/api/ask",
     sessionApiUrl: "http://103.39.131.9:8050/create-session",
-    storeId: currentScript.getAttribute('data-store-id') || "118",
+    storeId: currentScript.getAttribute('data-store-id') || "116",
     welcomeMessage: currentScript.getAttribute('data-welcome-message') || "Hello! How can I help you today?",
     primaryColor: currentScript.getAttribute('data-primary-color') || "#8B5CF6",
     secondaryColor: currentScript.getAttribute('data-secondary-color') || "#6D28D9",
@@ -422,47 +422,47 @@
   };
 
   // 2. Check if trainings exist before showing chatbot
-  // fetch(`https://chatbot-bpy.clustersofttech.com/trainlist?store_id=${config.storeId}`)
-  //   .then(res => res.json())
-  //   .then(data => {
-  //     if (data.trainings && data.trainings.length > 0) {
-  //       console.log("Trainings found → showing chatbot");
-  //       initWidget(config);   // init if trainings exist
-  //     } else {
-  //       console.log("No trainings found → chatbot hidden");
-  //     }
-  //   })
-  //   .catch(err => console.error("Error checking trainings:", err));
+  fetch(`https://chatbot-bpy.clustersofttech.com/trainlist?store_id=${config.storeId}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.trainings && data.trainings.length > 0) {
+        console.log("Trainings found → showing chatbot");
+        initWidget(config);   // init if trainings exist
+      } else {
+        console.log("No trainings found → chatbot hidden");
+      }
+    })
+    .catch(err => console.error("Error checking trainings:", err));
 
 
-  (async function() {
-  const cacheKey = `chatbot_trainings_${config.storeId}`;
-  let trainingsData = localStorage.getItem(cacheKey);
+//   (async function() {
+//   const cacheKey = `chatbot_trainings_${config.storeId}`;
+//   let trainingsData = localStorage.getItem(cacheKey);
 
-  if (trainingsData) {
-    // use cached
-    trainingsData = JSON.parse(trainingsData);
-    console.log("Loaded trainings from cache");
-  } else {
-    // fetch once and cache
-    try {
-      const res = await fetch(`https://chatbot-bpy.clustersofttech.com/trainlist?store_id=${config.storeId}`);
-      trainingsData = await res.json();
-      localStorage.setItem(cacheKey, JSON.stringify(trainingsData));
-      console.log("Fetched trainings and cached");
-    } catch (err) {
-      console.error("Error checking trainings:", err);
-      trainingsData = { trainings: [] };
-    }
-  }
+//   if (trainingsData) {
+//     // use cached
+//     trainingsData = JSON.parse(trainingsData);
+//     console.log("Loaded trainings from cache");
+//   } else {
+//     // fetch once and cache
+//     try {
+//       const res = await fetch(`https://chatbot-bpy.clustersofttech.com/trainlist?store_id=${config.storeId}`);
+//       trainingsData = await res.json();
+//       localStorage.setItem(cacheKey, JSON.stringify(trainingsData));
+//       console.log("Fetched trainings and cached");
+//     } catch (err) {
+//       console.error("Error checking trainings:", err);
+//       trainingsData = { trainings: [] };
+//     }
+//   }
 
-  // now decide whether to show chatbot
-  if (trainingsData.trainings && trainingsData.trainings.length > 0) {
-    initWidget(config);
-  } else {
-    console.log("No trainings found → chatbot hidden");
-  }
-})();
+//   // now decide whether to show chatbot
+//   if (trainingsData.trainings && trainingsData.trainings.length > 0) {
+//     initWidget(config);
+//   } else {
+//     console.log("No trainings found → chatbot hidden");
+//   }
+// })();
 
 
   // ========= Widget Initializer =========
