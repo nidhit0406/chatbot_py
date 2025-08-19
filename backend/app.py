@@ -189,24 +189,47 @@ def get_shopify_context(shop_domain):
         shopify.ShopifyResource.clear_session()
 
 # Routes
-@app.route('/')
-def root():
-    """Root endpoint with Shopify OAuth handling"""
-    shop = request.args.get('shop')
-    hmac_param = request.args.get('hmac')
+# @app.route('/')
+# def root():
+#     """Root endpoint with Shopify OAuth handling"""
+#     shop = request.args.get('shop')
+#     hmac_param = request.args.get('hmac')
     
-    # Case 1: Shopify OAuth flow
-    if shop and hmac_param:
-        if verify_shopify_hmac(hmac_param, request.args):
-            return redirect(f'/install?{urlencode(request.args)}')
-        return "Invalid HMAC signature", 400
+#     # Case 1: Shopify OAuth flow
+#     if shop and hmac_param:
+#         if verify_shopify_hmac(hmac_param, request.args):
+#             return redirect(f'/install?{urlencode(request.args)}')
+#         return "Invalid HMAC signature", 400
     
-    # Case 2: Direct access
+#     # Case 2: Direct access
+#     return """
+#     <h1>Welcome to Shopify AI Chatbot</h1>
+#     <p>Install this app via your Shopify Admin</p>
+#     <p>Or access via: <a href="/api/messages">Chat API</a></p>
+#     """
+
+@app.route("/")
+def index():
+    shop = request.args.get("shop")
+    hmac = request.args.get("hmac")
+
+    # Case 1: Called by Shopify with OAuth params
+    if shop and hmac:
+        # Rebuild query params and redirect to /install
+        query_params = request.args.to_dict(flat=True)
+        return redirect(f"/install?{urlencode(query_params)}")
+
+    # Case 2: Called without params (e.g., direct browser visit)
     return """
-    <h1>Welcome to Shopify AI Chatbot</h1>
-    <p>Install this app via your Shopify Admin</p>
-    <p>Or access via: <a href="/api/messages">Chat API</a></p>
-    """
+        <html>
+            <head><title>Chatbot App</title></head>
+            <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+                <h1>🤖 Chatbot App</h1>
+                <p>Your app is running successfully!</p>
+                <p>If you installed this app in Shopify, please open it from your <b>Shopify Admin</b>.</p>
+            </body>
+        </html>
+    """, 200
 
 @app.route('/install')
 def install():
@@ -408,6 +431,85 @@ def get_trainlist():
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({"message": "Error occurred, please try again."}), 500
+    
+    
+
+@app.route('/trainlistByStoreName', methods=['GET'])
+def get_trainlist():
+    store = request.args.get('store')  # Get store_id from query parameters
+    store_id = 0
+    
+    if not store:
+        return jsonify({"message": "store_id parameter is required!"}), 400
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+
+        # Fetch store details
+        cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE name = %s", (store))
+        store = cursor.fetchone()
+        store_id = store["store_id"] if store else None
+
+        if not store:
+            conn.close()
+            return jsonify({"message": "Store not found!"}), 404
+
+        # Fetch client details
+        cursor.execute("SELECT id AS client_id, email, created_at FROM client WHERE id = %s", (store["client_id"],))
+        client = cursor.fetchone()
+
+        if not client:
+            conn.close()
+            return jsonify({"message": "Client not found!"}), 404
+
+        # Fetch all training records for the given store_id
+        cursor.execute(
+            """
+            SELECT id AS training_id, created_at, store_id, file_jsonl, jsonl_status, 
+                   file_id, model_id, status, error_message, try, client_id, is_running, website_url
+            FROM training
+            WHERE store_id = %s
+            ORDER BY created_at DESC
+            """,
+            (store_id,)
+        )
+        training_records = cursor.fetchall()
+        conn.close()
+
+        return jsonify({
+            "client_id": client["client_id"],
+            "email": client["email"],
+            "created_at": client["created_at"].isoformat() if client["created_at"] else None,
+            "store": {
+                "store_id": store["store_id"],
+                "name": store["name"],
+            },
+            "trainings": [
+                {
+                    "training_id": record["training_id"],
+                    "created_at": record["created_at"].isoformat() if record["created_at"] else None,
+                    "store_id": record["store_id"],
+                    "file_jsonl": record["file_jsonl"],
+                    "jsonl_status": record["jsonl_status"],
+                    "file_id": record["file_id"],
+                    "model_id": record["model_id"],
+                    "status": record["status"],
+                    "error_message": record["error_message"],
+                    "try": record["try"],
+                    "client_id": record["client_id"],
+                    "is_running": record["is_running"],
+                    "website_url": record["website_url"]
+                }
+                for record in training_records
+            ]
+        }), 200
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"message": "Error occurred, please try again."}), 500
+    
+
 
 if __name__ == '__main__':
     import os
