@@ -413,16 +413,13 @@
   const config = {
     apiUrl: currentScript.getAttribute('data-api-url') || "https://n8nflow.byteztech.in/webhook/api/ask",
     sessionApiUrl: "http://103.39.131.9:8050/create-session",
-    storeId: currentScript.getAttribute('data-store-id') || "",
+    storeId: currentScript.getAttribute('data-store-id') || "116",
     welcomeMessage: currentScript.getAttribute('data-welcome-message') || "Hello! How can I help you today?",
     primaryColor: currentScript.getAttribute('data-primary-color') || "#8B5CF6",
     secondaryColor: currentScript.getAttribute('data-secondary-color') || "#6D28D9",
     widgetTitle: currentScript.getAttribute('data-widget-title') || "AI Assistant",
     position: currentScript.getAttribute('data-position') || "right"
   };
-
-  console.log("storeId:", config.storeId);
-  
 
   // 2. Check if trainings exist before showing chatbot
   fetch(`https://chatbot-bpy.clustersofttech.com/trainlist?store_id=${config.storeId}`)
