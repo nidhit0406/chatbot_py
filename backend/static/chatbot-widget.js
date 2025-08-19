@@ -481,33 +481,24 @@
   };
 
   const cacheKey = `chatbot_trainings_${config.storeId}`;
-  const cacheExpiryKey = `${cacheKey}_expiry`;
-  const now = Date.now();
-
   let trainingsData = null;
-  const expiry = localStorage.getItem(cacheExpiryKey);
 
-  // ✅ Step 1: Use cache if still valid
-  if (expiry && now < parseInt(expiry, 10)) {
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      trainingsData = JSON.parse(cached);
-      console.log("✅ Loaded trainings from cache");
-    }
+  // ✅ Step 1: Use cache if it exists
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    trainingsData = JSON.parse(cached);
+    console.log("✅ Loaded trainings from cache");
   }
 
-  // ✅ Step 2: If no valid cache, fetch from API
+  // ✅ Step 2: If no cache, fetch from API
   if (!trainingsData) {
     try {
       const res = await fetch(`https://chatbot-bpy.clustersofttech.com/trainlist?store_id=${config.storeId}`);
       trainingsData = await res.json();
 
-      // Set cache with expiry (30 minutes)
-      const ttl = 30 * 60 * 1000; // 30 minutes in ms
+      // Cache result until explicitly cleared
       localStorage.setItem(cacheKey, JSON.stringify(trainingsData));
-      localStorage.setItem(cacheExpiryKey, (now + ttl).toString());
-
-      console.log("✅ Trainings fetched and cached (30 min)");
+      console.log("✅ Trainings fetched and cached (no expiry)");
     } catch (err) {
       console.error("❌ Error fetching trainings:", err);
       trainingsData = { trainings: [] };
@@ -523,6 +514,7 @@
     window.location.href = "http://103.39.131.9:8011/login";
   }
 })();
+
 
 
 
