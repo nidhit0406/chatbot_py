@@ -243,70 +243,24 @@ function App() {
       setIsShopifyInstall(true);
       setLoading(true);
       
-      // Call backend install API with all the query parameters
-      handleShopifyInstall();
+      // Directly redirect to backend install API
+      handleDirectRedirect();
     } else {
       // Normal session initialization for regular chat usage
       initializeSession();
     }
   }, []);
 
-  const handleShopifyInstall = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Get all query parameters from URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const params = Object.fromEntries(urlParams.entries());
-      
-      console.log('Calling backend install with params:', params);
-      
-      // Use fetch instead of axios to better handle redirects
-      const queryString = new URLSearchParams(params).toString();
-      const backendUrl = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
-      
-      const response = await fetch(backendUrl, {
-        method: 'GET',
-        redirect: 'manual' // Don't automatically follow redirects
-      });
-
-      // Handle redirect responses (302, 301, etc.)
-      if (response.status >= 300 && response.status < 400) {
-        const redirectUrl = response.headers.get('Location');
-        console.log('Redirecting to:', redirectUrl);
-        if (redirectUrl) {
-          window.location.href = redirectUrl;
-          return;
-        } else {
-          throw new Error('No redirect location found');
-        }
-      }
-
-      // Handle non-redirect responses
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Backend response:', data);
-        
-        if (data.redirect_url) {
-          window.location.href = data.redirect_url;
-        } else {
-          throw new Error('No redirect URL in response');
-        }
-      } else {
-        throw new Error(`Backend returned status: ${response.status}`);
-      }
-      
-    } catch (error) {
-      console.error('Shopify installation error:', error);
-      setError(`Failed to install Shopify app: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
+  const handleDirectRedirect = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryString = urlParams.toString();
+    window.location.href = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
   };
 
-  // Alternative approach using iframe for redirects
   const handleShopifyInstallWithIframe = () => {
+    setLoading(true);
+    setError('');
+    
     const urlParams = new URLSearchParams(window.location.search);
     const queryString = urlParams.toString();
     const backendUrl = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
@@ -317,15 +271,11 @@ function App() {
     iframe.src = backendUrl;
     iframe.onload = () => {
       console.log('Iframe loaded, installation should be complete');
-      // Check if we're now in the Shopify admin
-      if (window.location.href.includes('admin.shopify.com')) {
-        console.log('Successfully redirected to Shopify admin');
-      } else {
-        setError('Installation may have completed. Please check your Shopify admin.');
-      }
+      setLoading(false);
     };
     iframe.onerror = () => {
       setError('Failed to load installation iframe');
+      setLoading(false);
     };
     
     document.body.appendChild(iframe);
@@ -364,44 +314,29 @@ function App() {
             <>
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
               <h2 className="text-xl font-semibold text-gray-800 mb-2">Installing Shopify App</h2>
-              <p className="text-gray-600">Redirecting to Shopify for authentication...</p>
-              <p className="text-sm text-gray-500 mt-2">
-                If you're not redirected automatically, check your popup blocker.
-              </p>
+              <p className="text-gray-600">Redirecting to installation...</p>
             </>
           )}
           
           {error && (
             <>
               <div className="text-red-500 text-4xl mb-4">⚠️</div>
-              <h2 className="text-xl font-semibold text-red-800 mb-2">Installation Issue</h2>
+              <h2 className="text-xl font-semibold text-red-800 mb-2">Installation Failed</h2>
               <p className="text-red-600 mb-4">{error}</p>
               
               <div className="space-y-2">
                 <button
-                  onClick={handleShopifyInstall}
+                  onClick={handleDirectRedirect}
                   className="w-full bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-medium"
                 >
-                  Try Again (Fetch API)
+                  Try Direct Redirect Again
                 </button>
                 
                 <button
                   onClick={handleShopifyInstallWithIframe}
                   className="w-full bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium"
                 >
-                  Try Again (Iframe Method)
-                </button>
-                
-                <button
-                  onClick={() => {
-                    // Direct browser redirect as fallback
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const queryString = urlParams.toString();
-                    window.location.href = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
-                  }}
-                  className="w-full bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium"
-                >
-                  Direct Redirect
+                  Try Iframe Method
                 </button>
               </div>
               
