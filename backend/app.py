@@ -232,6 +232,18 @@ def index():
         </html>
     """, 200
 
+# @app.route('/install')
+# def install():
+#     shop = request.args.get('shop')
+#     if not shop:
+#         return "Shop parameter missing", 400
+    
+#     scopes = 'write_script_tags,read_products'
+#     redirect_uri = f"{APP_URL}/auth/callback"  # Fixed syntax
+#     # redirect_uri = f"(`https://${shop}/admin/apps`)"  # Fixed syntax
+#     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
+#     return redirect(install_url)
+
 @app.route('/install')
 def install():
     shop = request.args.get('shop')
@@ -239,9 +251,12 @@ def install():
         return "Shop parameter missing", 400
     
     scopes = 'write_script_tags,read_products'
-    redirect_uri = f"{APP_URL}/auth/callback"  # Fixed syntax
-    # redirect_uri = f"(`https://${shop}/admin/apps`)"  # Fixed syntax
+    redirect_uri = f"{APP_URL}/auth/callback"
+    
+    # Build the Shopify OAuth URL
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
+    
+    # Return a proper redirect response
     return redirect(install_url)
 
 
