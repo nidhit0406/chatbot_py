@@ -115,6 +115,7 @@ SHOPIFY_API_KEY = os.getenv("SHOPIFY_API_KEY")
 SHOPIFY_API_SECRET = os.getenv("SHOPIFY_API_SECRET")
 SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2023-07")
 APP_URL = os.getenv("APP_URL")
+SHOPIFY_APP_HANDLE = os.getenv("SHOPIFY_APP_HANDLE")
 
 # Database simulation
 shops_db = {}  # {shop_domain: {access_token: str, chat_history: list}}
@@ -279,7 +280,7 @@ def auth_callback():
 }, headers={
     "X-Shopify-Access-Token": access_token
 })
-        return redirect(f"https://{shop}/admin/apps/{SHOPIFY_API_KEY}")
+        return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}/admin")
     
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
