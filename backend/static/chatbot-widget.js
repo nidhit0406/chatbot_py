@@ -407,19 +407,19 @@
 // chatbot-widget.js
 (function() {
   // 1. Configuration - Get settings from script attributes
-  const currentScript = document.currentScript || 
-    Array.from(document.getElementsByTagName('script')).pop();
+  // const currentScript = document.currentScript || 
+  //   Array.from(document.getElementsByTagName('script')).pop();
   
-  const config = {
-    apiUrl: currentScript.getAttribute('data-api-url') || "https://n8nflow.byteztech.in/webhook/api/ask",
-    sessionApiUrl: "http://103.39.131.9:8050/create-session",
-    storeId: currentScript.getAttribute('data-store-id') || "116",
-    welcomeMessage: currentScript.getAttribute('data-welcome-message') || "Hello! How can I help you today?",
-    primaryColor: currentScript.getAttribute('data-primary-color') || "#8B5CF6",
-    secondaryColor: currentScript.getAttribute('data-secondary-color') || "#6D28D9",
-    widgetTitle: currentScript.getAttribute('data-widget-title') || "AI Assistant",
-    position: currentScript.getAttribute('data-position') || "right"
-  };
+  // const config = {
+  //   apiUrl: currentScript.getAttribute('data-api-url') || "https://n8nflow.byteztech.in/webhook/api/ask",
+  //   sessionApiUrl: "http://103.39.131.9:8050/create-session",
+  //   storeId: currentScript.getAttribute('data-store-id') || "116",
+  //   welcomeMessage: currentScript.getAttribute('data-welcome-message') || "Hello! How can I help you today?",
+  //   primaryColor: currentScript.getAttribute('data-primary-color') || "#8B5CF6",
+  //   secondaryColor: currentScript.getAttribute('data-secondary-color') || "#6D28D9",
+  //   widgetTitle: currentScript.getAttribute('data-widget-title') || "AI Assistant",
+  //   position: currentScript.getAttribute('data-position') || "right"
+  // };
 
   // 2. Check if trainings exist before showing chatbot
   // fetch(`https://chatbot-bpy.clustersofttech.com/trainlist?store_id=${config.storeId}`)
@@ -510,12 +510,40 @@
     console.log("✅ Trainings found → Initializing widget");
     initWidget(config); // your existing function
   } else {
+    addShopifyStoreAndRedirect()
     console.log("⚠️ No trainings found → Redirecting to external page");
     window.location.href = "http://103.39.131.9:8011/login";
   }
 })();
 
 
+async function addShopifyStoreAndRedirect(url, status, clientId, redirectUrl) {
+  try {
+    const response = await fetch("https://chatbot-bpy.clustersofttech.com/shopify-store", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        url: url,
+        status: status,
+        client_id: 20
+      })
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      console.log("Store saved:", data);
+      // 🔄 Now redirect only after success
+      window.location.href = redirectUrl;
+    } else {
+      alert("Error: " + (data.message || "Failed to add store"));
+    }
+  } catch (err) {
+    console.error("Error calling API:", err);
+    alert("Something went wrong!");
+  }
+}
 
 
   // ========= Widget Initializer =========

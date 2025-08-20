@@ -510,6 +510,94 @@ def get_trainlist():
 #         return jsonify({"message": "Error occurred, please try again."}), 500
     
 
+@app.route('/shopify-store', methods=['POST'])
+def add_shopify_store():
+    data = request.get_json()
+
+    raw_url = data.get('url')
+    status = data.get('status')
+    client_id = data.get('client_id')  # now client_id should come from the request
+
+    if not raw_url or not status or not client_id:
+        return jsonify({"message": "client_id, url and status are required!"}), 400
+
+    # Derive store name from the domain (remove protocol and TLDs), but keep URL as-is
+    parse_target = raw_url
+    if not parse_target.startswith("http://") and not parse_target.startswith("https://"):
+        parse_target = "https://" + parse_target.lstrip("/")
+
+    try:
+        parsed = urllib.parse.urlparse(parse_target)
+        hostname = parsed.hostname or ""
+    except Exception:
+        hostname = ""
+
+    if not hostname:
+        # Fallback parsing if urlparse failed
+        temp = raw_url
+        if '://' in temp:
+            temp = temp.split('://', 1)[1]
+        temp = temp.lstrip('/')
+        hostname = temp.split('/', 1)[0]
+
+    if hostname.startswith('www.'):
+        hostname = hostname[4:]
+
+    parts = [p for p in hostname.split('.') if p]
+    if len(parts) >= 2:
+        derived_name = parts[-2]  # e.g., amazon from amazon.in / amazon.com
+    elif parts:
+        derived_name = parts[0]
+    else:
+        derived_name = hostname or "store"
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check duplicate store (same client, same name and url)
+        cursor.execute(
+            """
+            SELECT id 
+            FROM store 
+            WHERE client_id = %s AND name = %s AND url = %s
+            """,
+            (client_id, derived_name, raw_url)
+        )
+        existing_store = cursor.fetchone()
+
+        if existing_store:
+            conn.close()
+            return jsonify({
+                "message": f"Store with name '{derived_name}' and URL '{raw_url}' already exists for this client!",
+                "store_id": existing_store["id"] if isinstance(existing_store, dict) else existing_store[0]
+            }), 200
+
+        # Insert new store
+        cursor.execute(
+            """
+            INSERT INTO store (client_id, name, url, status) 
+            VALUES (%s, %s, %s, %s) 
+            RETURNING id, created_at
+            """,
+            (client_id, derived_name, raw_url, status)
+        )
+        new_store = cursor.fetchone()
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "message": "Store data added successfully!",
+            "store_id": new_store["id"] if isinstance(new_store, dict) else new_store[0],
+            "name": derived_name,
+            "url": raw_url,
+            "created_at": new_store["created_at"].isoformat() if isinstance(new_store, dict) and new_store.get("created_at") else None
+        }), 201
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"message": "Error occurred, please try again."}), 500
+
 
 if __name__ == '__main__':
     import os
