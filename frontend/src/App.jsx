@@ -263,7 +263,7 @@ function App() {
       console.log('Calling backend install with params:', params);
       
       // Call your backend install endpoint with all the original parameters
-      const response = await axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/install`, {
+      const response = await axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/`, {
         params: params
       });
 
