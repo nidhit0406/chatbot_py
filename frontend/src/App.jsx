@@ -225,47 +225,28 @@ function App() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [sessionId, setSessionId] = useState('');
   const [isShopifyInstall, setIsShopifyInstall] = useState(false);
-  const [isEmbedded, setIsEmbedded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [shopName, setShopName] = useState('');
+  const [error, setError] = useState('');
+
+  const toggleChat = () => {
+    setIsChatOpen(!isChatOpen);
+  };
 
   useEffect(() => {
+    // Check if this is a Shopify installation request
     const urlParams = new URLSearchParams(window.location.search);
     const shop = urlParams.get('shop');
     const hmac = urlParams.get('hmac');
-    const embedded = urlParams.get('embedded');
-    
-    // Check if embedded in Shopify Admin
-    if (embedded === 'true' && shop) {
-      console.log('Running in Shopify Admin embedded mode');
-      setIsEmbedded(true);
-      setIsChatOpen(true);
-      setShopName(shop.replace('.myshopify.com', ''));
-      return;
-    }
 
-    // Check localStorage for embedded flag (from redirect)
-    const storedEmbedded = localStorage.getItem('shopify_embedded');
-    const storedShop = localStorage.getItem('shopify_shop');
-    if (storedEmbedded === 'true' && storedShop) {
-      console.log('Running in embedded mode from localStorage');
-      setIsEmbedded(true);
-      setIsChatOpen(true);
-      setShopName(storedShop.replace('.myshopify.com', ''));
-      // Clear the stored values
-      localStorage.removeItem('shopify_embedded');
-      localStorage.removeItem('shopify_shop');
-      localStorage.removeItem('shopify_host');
-      return;
-    }
-
-    // Check if Shopify installation request
     if (shop && hmac) {
-      console.log('Shopify installation detected');
+      console.log('Shopify installation detected - shop:', shop, 'hmac:', hmac);
       setIsShopifyInstall(true);
       setLoading(true);
+      
+      // Directly redirect to backend install API
       handleDirectRedirect();
     } else {
+      // Normal session initialization for regular chat usage
       initializeSession();
     }
   }, []);
@@ -274,6 +255,30 @@ function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const queryString = urlParams.toString();
     window.location.href = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
+  };
+
+  const handleShopifyInstallWithIframe = () => {
+    setLoading(true);
+    setError('');
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryString = urlParams.toString();
+    const backendUrl = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
+    
+    // Create a hidden iframe to handle the redirect
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = backendUrl;
+    iframe.onload = () => {
+      console.log('Iframe loaded, installation should be complete');
+      setLoading(false);
+    };
+    iframe.onerror = () => {
+      setError('Failed to load installation iframe');
+      setLoading(false);
+    };
+    
+    document.body.appendChild(iframe);
   };
 
   const initializeSession = async () => {
@@ -291,6 +296,8 @@ function App() {
         if (data.session_id) {
           localStorage.setItem('session_id', data.session_id);
           setSessionId(data.session_id);
+        } else {
+          console.warn('No session_id in response');
         }
       } catch (error) {
         console.error('Error fetching session_id:', error);
@@ -298,33 +305,7 @@ function App() {
     }
   };
 
-  // Embedded mode in Shopify Admin
-  if (isEmbedded) {
-    return (
-      <div style={{ 
-        padding: '20px', 
-        height: '100vh', 
-        background: '#f9fafb',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      }}>
-        <div style={{ 
-          background: 'white', 
-          borderRadius: '8px', 
-          padding: '20px', 
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          marginBottom: '20px'
-        }}>
-          <h2 style={{ margin: '0 0 10px 0', color: '#333' }}>🤖 AI Chatbot</h2>
-          <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
-            Welcome to your store's AI assistant{shopName ? ` for ${shopName}` : ''}
-          </p>
-        </div>
-        <Chatbox embedded={true} />
-      </div>
-    );
-  }
-
-  // Shopify Installation Flow
+  // Show loading/error state during Shopify installation
   if (isShopifyInstall) {
     return (
       <div className="w-screen h-screen flex justify-center items-center bg-gray-100">
@@ -336,33 +317,58 @@ function App() {
               <p className="text-gray-600">Redirecting to installation...</p>
             </>
           )}
+          
+          {error && (
+            <>
+              <div className="text-red-500 text-4xl mb-4">⚠️</div>
+              <h2 className="text-xl font-semibold text-red-800 mb-2">Installation Failed</h2>
+              <p className="text-red-600 mb-4">{error}</p>
+              
+              <div className="space-y-2">
+                <button
+                  onClick={handleDirectRedirect}
+                  className="w-full bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-medium"
+                >
+                  Try Direct Redirect Again
+                </button>
+                
+                <button
+                  onClick={handleShopifyInstallWithIframe}
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium"
+                >
+                  Try Iframe Method
+                </button>
+              </div>
+              
+              <p className="text-sm text-gray-500 mt-4">
+                If issues persist, try installing directly from your Shopify admin.
+              </p>
+            </>
+          )}
         </div>
       </div>
     );
   }
 
-  // Standalone Chat App
+  // Normal chat app interface
   return (
     <div className="w-screen h-screen flex justify-center items-center bg-gray-100">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">🤖 AI Chatbot</h1>
-        <p className="text-gray-600">Open the chat widget to start conversation</p>
-      </div>
-
+      {/* WeChat Icon */}
       {!isChatOpen && (
         <button
-          onClick={() => setIsChatOpen(true)}
+          onClick={toggleChat}
           className="fixed bottom-5 right-5 bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-full shadow-lg transition-colors duration-200"
         >
           <SiWechat className="text-2xl" />
         </button>
       )}
 
+      {/* Chatbox */}
       {isChatOpen && (
         <div className="w-[90%] max-w-md fixed bottom-5 right-5 flex flex-col items-end">
           <Chatbox />
           <button
-            onClick={() => setIsChatOpen(false)}
+            onClick={toggleChat}
             className="mt-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors duration-200"
           >
             <PiChatCircleSlashFill />
