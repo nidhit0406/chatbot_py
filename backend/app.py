@@ -239,8 +239,8 @@ def install():
         return "Shop parameter missing", 400
     
     scopes = 'write_script_tags,read_products'
-    # redirect_uri = f"{APP_URL}/auth/callback"  # Fixed syntax
-    redirect_uri = f"(`https://${shop}/admin/apps`)"  # Fixed syntax
+    redirect_uri = f"{APP_URL}/auth/callback"  # Fixed syntax
+    # redirect_uri = f"(`https://${shop}/admin/apps`)"  # Fixed syntax
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
     return redirect(install_url)
 
