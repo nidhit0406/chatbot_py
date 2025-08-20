@@ -138,6 +138,83 @@
 
 
 
+// import { useEffect, useState } from 'react';
+// import { SiWechat } from 'react-icons/si';
+// import Chatbox from './components/Chatbox';
+// import { PiChatCircleSlashFill } from "react-icons/pi";
+// import axios from 'axios';
+
+// function App() {
+//   const [isChatOpen, setIsChatOpen] = useState(false);
+
+//   const toggleChat = () => {
+//     setIsChatOpen(!isChatOpen);
+//   };
+
+//   const [sessionId, setSessionId] = useState('');
+//   console.log(sessionId, "sessionId");
+//   useEffect(() => {
+//     console.log('sessionId changed');
+//     const getSessionId = async () => {
+//       let storedSessionId = localStorage.getItem('session_id');
+//       if (storedSessionId) {
+//         setSessionId(storedSessionId);
+//       } else {
+//         try {
+//           const response = await axios.post(`${import.meta.env.VITE_APP_API_URL}/create-session`, {}, {
+//             headers: { 'Content-Type': 'application/json' },
+//           });
+//           const data = response.data;
+//           console.log(data, "data");
+
+//           if (data.session_id) {
+//             localStorage.setItem('session_id', data.session_id);
+//             setSessionId(data.session_id);
+//           } else {
+//             console.warn('No session_id in response');
+//             //   addMessage('Failed to initialize session. Please try again.', 'error');
+//           }
+//         } catch (error) {
+//           console.error('Error fetching session_id:', error);
+//           // addMessage('Unable to connect to session service. Please try again later.', 'error');
+//         }
+//       }
+//     };
+
+//     getSessionId();
+//   }, []);
+
+
+//   return (
+//     <div className="w-screen h-screen flex justify-center items-center bg-gray-100">
+//       {/* WeChat Icon */}
+//       {!isChatOpen && (
+//         <button
+//           onClick={toggleChat}
+//           className="fixed bottom-5 right-5 bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-full shadow-lg transition-colors duration-200"
+//         >
+//           <SiWechat className="text-2xl" />
+//         </button>
+//       )}
+
+//       {/* Chatbox */}
+//       {isChatOpen && (
+//         <div className="w-[90%] max-w-md fixed bottom-5 right-5 flex flex-col items-end">
+//           <Chatbox />
+//           <button
+//             onClick={toggleChat}
+//             className="mt-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors duration-200"
+//           >
+//             <PiChatCircleSlashFill />
+//           </button>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+// export default App;
+
 import { useEffect, useState } from 'react';
 import { SiWechat } from 'react-icons/si';
 import Chatbox from './components/Chatbox';
@@ -146,47 +223,145 @@ import axios from 'axios';
 
 function App() {
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [sessionId, setSessionId] = useState('');
+  const [isShopifyInstall, setIsShopifyInstall] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const toggleChat = () => {
     setIsChatOpen(!isChatOpen);
   };
 
-  const [sessionId, setSessionId] = useState('');
-  console.log(sessionId, "sessionId");
   useEffect(() => {
-    console.log('sessionId changed');
-    const getSessionId = async () => {
-      let storedSessionId = localStorage.getItem('session_id');
-      if (storedSessionId) {
-        setSessionId(storedSessionId);
-      } else {
-        try {
-          const response = await axios.post(`${import.meta.env.VITE_APP_API_URL}/create-session`, {}, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-          const data = response.data;
-          console.log(data, "data");
+    // Check if this is a Shopify installation request
+    const urlParams = new URLSearchParams(window.location.search);
+    const shop = urlParams.get('shop');
+    const hmac = urlParams.get('hmac');
 
-          if (data.session_id) {
-            localStorage.setItem('session_id', data.session_id);
-            setSessionId(data.session_id);
-          } else {
-            console.warn('No session_id in response');
-            //   addMessage('Failed to initialize session. Please try again.', 'error');
-          }
-        } catch (error) {
-          console.error('Error fetching session_id:', error);
-          // addMessage('Unable to connect to session service. Please try again later.', 'error');
-        }
-      }
-    };
-
-    getSessionId();
+    if (shop && hmac) {
+      console.log('Shopify installation detected - shop:', shop, 'hmac:', hmac);
+      setIsShopifyInstall(true);
+      setLoading(true);
+      
+      // Call backend install API with all the query parameters
+      handleShopifyInstall();
+    } else {
+      // Normal session initialization for regular chat usage
+      initializeSession();
+    }
   }, []);
 
+  const handleShopifyInstall = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      // Get all query parameters from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const params = Object.fromEntries(urlParams.entries());
+      
+      console.log('Calling backend install with params:', params);
+      
+      // Call your backend install endpoint with all the original parameters
+      const response = await axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/install`, {
+        params: params
+      });
 
+      // The backend should handle the redirect to Shopify OAuth
+      // If we get here, it means the backend returned something unexpected
+      console.log('Backend response:', response.data);
+      
+      // Check if backend returned a redirect URL
+      if (response.data.redirect_url) {
+        window.location.href = response.data.redirect_url;
+      } else {
+        setError('Installation failed: No redirect URL received');
+      }
+      
+    } catch (error) {
+      console.error('Shopify installation error:', error);
+      
+      // Handle axios errors (like redirects that cause CORS issues)
+      if (error.response?.status >= 300 && error.response?.status < 400) {
+        // This is a redirect - follow the location header
+        const redirectUrl = error.response.headers.location;
+        window.location.href = redirectUrl;
+        return;
+      }
+      
+      setError('Failed to install Shopify app. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const initializeSession = async () => {
+    console.log('Initializing normal chat session');
+    let storedSessionId = localStorage.getItem('session_id');
+    if (storedSessionId) {
+      setSessionId(storedSessionId);
+    } else {
+      try {
+        const response = await axios.post(`${import.meta.env.VITE_APP_API_URL}/create-session`, {}, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = response.data;
+
+        if (data.session_id) {
+          localStorage.setItem('session_id', data.session_id);
+          setSessionId(data.session_id);
+        } else {
+          console.warn('No session_id in response');
+        }
+      } catch (error) {
+        console.error('Error fetching session_id:', error);
+      }
+    }
+  };
+
+  // Show loading/error state during Shopify installation
+  if (isShopifyInstall) {
+    return (
+      <div className="w-screen h-screen flex justify-center items-center bg-gray-100">
+        <div className="text-center p-8 bg-white rounded-lg shadow-md max-w-md">
+          {loading && (
+            <>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">Installing Shopify App</h2>
+              <p className="text-gray-600">Redirecting to Shopify for authentication...</p>
+            </>
+          )}
+          
+          {error && (
+            <>
+              <div className="text-red-500 text-4xl mb-4">⚠️</div>
+              <h2 className="text-xl font-semibold text-red-800 mb-2">Installation Failed</h2>
+              <p className="text-red-600 mb-4">{error}</p>
+              <button
+                onClick={handleShopifyInstall}
+                className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-medium"
+              >
+                Try Again
+              </button>
+              <p className="text-sm text-gray-500 mt-4">
+                Or contact support if the issue persists.
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Normal chat app interface (shown when no Shopify params)
   return (
     <div className="w-screen h-screen flex justify-center items-center bg-gray-100">
+      {/* Welcome message for direct access */}
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-4">🤖 AI Chatbot</h1>
+        <p className="text-gray-600">Open the chat widget to start conversation</p>
+      </div>
+
       {/* WeChat Icon */}
       {!isChatOpen && (
         <button
