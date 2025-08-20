@@ -512,12 +512,14 @@
   } else {
     addShopifyStoreAndRedirect()
     console.log("⚠️ No trainings found → Redirecting to external page");
-    window.location.href = "http://103.39.131.9:8011/login";
+    // window.location.href = "http://103.39.131.9:8011/login";
   }
 })();
 
 
 async function addShopifyStoreAndRedirect(url, status, clientId, redirectUrl) {
+  console.log("Adding Shopify store:", url, status, clientId, redirectUrl);
+  
   try {
     const response = await fetch("https://chatbot-bpy.clustersofttech.com/shopify-store", {
       method: "POST",
