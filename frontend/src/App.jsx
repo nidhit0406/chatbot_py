@@ -138,37 +138,123 @@
 
 
 
+// import { useEffect, useState } from 'react';
+// import { SiWechat } from 'react-icons/si';
+// import Chatbox from './components/Chatbox';
+// import { PiChatCircleSlashFill } from "react-icons/pi";
+// import axios from 'axios';
+
+// function App() {
+//   const [isChatOpen, setIsChatOpen] = useState(false);
+
+//   const toggleChat = () => {
+//     setIsChatOpen(!isChatOpen);
+//   };
+
+//   const [sessionId, setSessionId] = useState('');
+//   console.log(sessionId, "sessionId");
+//   useEffect(() => {
+
+//     const urlParams = new URLSearchParams(window.location.search);
+//     const shop = urlParams.get('shop');
+//     const hmac = urlParams.get('hmac');
+
+//     if (shop && hmac) {
+//       console.log('shopify installation detected');
+      
+//       // Redirect to backend install API
+//       const queryString = urlParams.toString();
+//       window.location.href = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
+//       return; // Exit early to prevent further execution
+//     }
+
+//     console.log('sessionId changed');
+//     const getSessionId = async () => {
+//       let storedSessionId = localStorage.getItem('session_id');
+//       if (storedSessionId) {
+//         setSessionId(storedSessionId);
+//       } else {
+//         try {
+//           const response = await axios.post(`${import.meta.env.VITE_APP_API_URL}/create-session`, {}, {
+//             headers: { 'Content-Type': 'application/json' },
+//           });
+//           const data = response.data;
+//           console.log(data, "data");
+
+//           if (data.session_id) {
+//             localStorage.setItem('session_id', data.session_id);
+//             setSessionId(data.session_id);
+//           } else {
+//             console.warn('No session_id in response');
+//             //   addMessage('Failed to initialize session. Please try again.', 'error');
+//           }
+//         } catch (error) {
+//           console.error('Error fetching session_id:', error);
+//           // addMessage('Unable to connect to session service. Please try again later.', 'error');
+//         }
+//       }
+//     };
+
+//     getSessionId();
+//   }, []);
+
+
+//   return (
+//     <div className="w-screen h-screen flex justify-center items-center bg-gray-100">
+//       {/* WeChat Icon */}
+//       {!isChatOpen && (
+//         <button
+//           onClick={toggleChat}
+//           className="fixed bottom-5 right-5 bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-full shadow-lg transition-colors duration-200"
+//         >
+//           <SiWechat className="text-2xl" />
+//         </button>
+//       )}
+
+//       {/* Chatbox */}
+//       {isChatOpen && (
+//         <div className="w-[90%] max-w-md fixed bottom-5 right-5 flex flex-col items-end">
+//           <Chatbox />
+//           <button
+//             onClick={toggleChat}
+//             className="mt-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors duration-200"
+//           >
+//             <PiChatCircleSlashFill />
+//           </button>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+// export default App;
+
+
+
 import { useEffect, useState } from 'react';
 import { SiWechat } from 'react-icons/si';
 import Chatbox from './components/Chatbox';
 import { PiChatCircleSlashFill } from "react-icons/pi";
 import axios from 'axios';
+import { Provider, useAppBridge } from '@shopify/app-bridge-react';
 
-function App() {
+function AppContent() {
   const [isChatOpen, setIsChatOpen] = useState(false);
-
-  const toggleChat = () => {
-    setIsChatOpen(!isChatOpen);
-  };
-
+  const app = useAppBridge();
   const [sessionId, setSessionId] = useState('');
-  console.log(sessionId, "sessionId");
-  useEffect(() => {
 
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const shop = urlParams.get('shop');
     const hmac = urlParams.get('hmac');
 
     if (shop && hmac) {
-      console.log('shopify installation detected');
-      
-      // Redirect to backend install API
+      console.log('Shopify installation detected');
       const queryString = urlParams.toString();
       window.location.href = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
-      return; // Exit early to prevent further execution
+      return;
     }
 
-    console.log('sessionId changed');
     const getSessionId = async () => {
       let storedSessionId = localStorage.getItem('session_id');
       if (storedSessionId) {
@@ -178,19 +264,12 @@ function App() {
           const response = await axios.post(`${import.meta.env.VITE_APP_API_URL}/create-session`, {}, {
             headers: { 'Content-Type': 'application/json' },
           });
-          const data = response.data;
-          console.log(data, "data");
-
-          if (data.session_id) {
-            localStorage.setItem('session_id', data.session_id);
-            setSessionId(data.session_id);
-          } else {
-            console.warn('No session_id in response');
-            //   addMessage('Failed to initialize session. Please try again.', 'error');
+          if (response.data.session_id) {
+            localStorage.setItem('session_id', response.data.session_id);
+            setSessionId(response.data.session_id);
           }
         } catch (error) {
           console.error('Error fetching session_id:', error);
-          // addMessage('Unable to connect to session service. Please try again later.', 'error');
         }
       }
     };
@@ -198,10 +277,12 @@ function App() {
     getSessionId();
   }, []);
 
+  const toggleChat = () => {
+    setIsChatOpen(!isChatOpen);
+  };
 
   return (
     <div className="w-screen h-screen flex justify-center items-center bg-gray-100">
-      {/* WeChat Icon */}
       {!isChatOpen && (
         <button
           onClick={toggleChat}
@@ -211,7 +292,6 @@ function App() {
         </button>
       )}
 
-      {/* Chatbox */}
       {isChatOpen && (
         <div className="w-[90%] max-w-md fixed bottom-5 right-5 flex flex-col items-end">
           <Chatbox />
@@ -224,6 +304,20 @@ function App() {
         </div>
       )}
     </div>
+  );
+}
+
+function App() {
+  const config = {
+    apiKey: import.meta.env.VITE_SHOPIFY_API_KEY,
+    host: new URLSearchParams(window.location.search).get('host'),
+    forceRedirect: true,
+  };
+
+  return (
+    <Provider config={config}>
+      <AppContent />
+    </Provider>
   );
 }
 
