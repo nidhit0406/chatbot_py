@@ -154,6 +154,20 @@ function App() {
   const [sessionId, setSessionId] = useState('');
   console.log(sessionId, "sessionId");
   useEffect(() => {
+
+//     const urlParams = new URLSearchParams(window.location.search);
+//     const shop = urlParams.get('shop');
+//     const hmac = urlParams.get('hmac');
+
+    if (shop && hmac) {
+      console.log('shopify installation detected');
+      
+      // Redirect to backend install API
+      const queryString = urlParams.toString();
+      window.location.href = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
+      return; // Exit early to prevent further execution
+    }
+
     console.log('sessionId changed');
     const getSessionId = async () => {
       let storedSessionId = localStorage.getItem('session_id');
