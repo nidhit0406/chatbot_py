@@ -138,109 +138,6 @@
 
 
 
-// import { useEffect, useState } from 'react';
-// import { SiWechat } from 'react-icons/si';
-// import Chatbox from './components/Chatbox';
-// import { PiChatCircleSlashFill } from "react-icons/pi";
-// import axios from 'axios';
-
-// function App() {
-//   const [isChatOpen, setIsChatOpen] = useState(false);
-
-//   const toggleChat = () => {
-//     setIsChatOpen(!isChatOpen);
-//   };
-
-//   const [sessionId, setSessionId] = useState('');
-//   console.log(sessionId, "sessionId");
-//   useEffect(() => {
-
-//     // const urlParams = new URLSearchParams(window.location.search);
-//     // const shop = urlParams.get('shop');
-//     // const hmac = urlParams.get('hmac');
-
-//     // if (shop && hmac) {
-//     //   console.log('shopify installation detected');
-      
-//     //   // Redirect to backend install API
-//     //   const queryString = urlParams.toString();
-//     //   window.location.href = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
-//     //   return; // Exit early to prevent further execution
-//     // }
-
-//     const urlParams = new URLSearchParams(window.location.search);
-//     const shop = urlParams.get('shop');
-//     const hmac = urlParams.get('hmac');
-
-//     if (shop && hmac) {
-//       console.log('shopify installation detected');
-//       // Instead of direct redirect, send a message to the parent window or handle via backend
-//       if (window.parent) {
-//         window.parent.postMessage({ type: 'shopifyInstall', shop, hmac }, '*');
-//       }
-//       return; // Exit early if Shopify installation is detected
-//     }
-
-//     console.log('sessionId changed');
-//     const getSessionId = async () => {
-//       let storedSessionId = localStorage.getItem('session_id');
-//       if (storedSessionId) {
-//         setSessionId(storedSessionId);
-//       } else {
-//         try {
-//           const response = await axios.post(`${import.meta.env.VITE_APP_API_URL}/create-session`, {}, {
-//             headers: { 'Content-Type': 'application/json' },
-//           });
-//           const data = response.data;
-//           console.log(data, "data");
-
-//           if (data.session_id) {
-//             localStorage.setItem('session_id', data.session_id);
-//             setSessionId(data.session_id);
-//           } else {
-//             console.warn('No session_id in response');
-//             //   addMessage('Failed to initialize session. Please try again.', 'error');
-//           }
-//         } catch (error) {
-//           console.error('Error fetching session_id:', error);
-//           // addMessage('Unable to connect to session service. Please try again later.', 'error');
-//         }
-//       }
-//     };
-
-//     getSessionId();
-//   }, []);
-
-
-//   return (
-//     <div className="w-screen h-screen flex justify-center items-center bg-gray-100">
-//       {/* WeChat Icon */}
-//       {!isChatOpen && (
-//         <button
-//           onClick={toggleChat}
-//           className="fixed bottom-5 right-5 bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-full shadow-lg transition-colors duration-200"
-//         >
-//           <SiWechat className="text-2xl" />
-//         </button>
-//       )}
-
-//       {/* Chatbox */}
-//       {isChatOpen && (
-//         <div className="w-[90%] max-w-md fixed bottom-5 right-5 flex flex-col items-end">
-//           <Chatbox />
-//           <button
-//             onClick={toggleChat}
-//             className="mt-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors duration-200"
-//           >
-//             <PiChatCircleSlashFill />
-//           </button>
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
-
-// export default App;
 import { useEffect, useState } from 'react';
 import { SiWechat } from 'react-icons/si';
 import Chatbox from './components/Chatbox';
@@ -256,43 +153,22 @@ function App() {
 
   const [sessionId, setSessionId] = useState('');
   console.log(sessionId, "sessionId");
-
   useEffect(() => {
+
     const urlParams = new URLSearchParams(window.location.search);
     const shop = urlParams.get('shop');
     const hmac = urlParams.get('hmac');
-    const embedded = urlParams.get('embedded'); // Check if embedded (usually '1' in iframes)
 
     if (shop && hmac) {
-      console.log('Shopify installation detected');
+      console.log('shopify installation detected');
       
-      const verifyInstall = async () => {
-        try {
-          // Make API call to backend to verify and get auth URL if needed
-          const queryString = urlParams.toString();
-          const response = await axios.get(`${import.meta.env.VITE_APP_BACKEND_URL}/verify-install?${queryString}`);
-          const data = response.data;
-
-          if (data.needsInstall) {
-            // Redirect top window to OAuth auth URL (Shopify domain, avoids CSP issues)
-            window.top.location.href = data.authUrl;
-            return; // Exit to prevent further execution
-          } else {
-            console.log('App already installed, proceeding...');
-            // Optionally handle post-install logic here
-          }
-        } catch (error) {
-          console.error('Error verifying installation:', error);
-          // Handle error (e.g., show message to user)
-        }
-      };
-
-      verifyInstall();
-      return; // Exit early if handling installation
+      // Redirect to backend install API
+      const queryString = urlParams.toString();
+      window.location.href = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
+      return; // Exit early to prevent further execution
     }
 
-    // Non-Shopify or post-install: Proceed with session ID logic
-    console.log('SessionId changed');
+    console.log('sessionId changed');
     const getSessionId = async () => {
       let storedSessionId = localStorage.getItem('session_id');
       if (storedSessionId) {
@@ -310,15 +186,18 @@ function App() {
             setSessionId(data.session_id);
           } else {
             console.warn('No session_id in response');
+            //   addMessage('Failed to initialize session. Please try again.', 'error');
           }
         } catch (error) {
           console.error('Error fetching session_id:', error);
+          // addMessage('Unable to connect to session service. Please try again later.', 'error');
         }
       }
     };
 
     getSessionId();
   }, []);
+
 
   return (
     <div className="w-screen h-screen flex justify-center items-center bg-gray-100">
@@ -349,6 +228,7 @@ function App() {
 }
 
 export default App;
+
 
 // import { useState } from 'react';
 // import { SiWechat } from 'react-icons/si';
