@@ -136,8 +136,6 @@
 // }
 // export default App;
 
-
-
 import { useEffect, useState } from 'react';
 import { SiWechat } from 'react-icons/si';
 import Chatbox from './components/Chatbox';
@@ -147,62 +145,79 @@ import axios from 'axios';
 function App() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [sessionId, setSessionId] = useState('');
+  const [isInstalling, setIsInstalling] = useState(false);
 
   const toggleChat = () => {
     setIsChatOpen(!isChatOpen);
   };
 
-useEffect(()=> {
-   const urlParams = new URLSearchParams(window.location.search);
-   console.log("urlParams",urlParams);
-   
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    console.log("urlParams", urlParams);
+    
     const shop = urlParams.get('shop');
     const hmac = urlParams.get('hmac');
     const host = urlParams.get('host');
+    const embedded = urlParams.get('embedded');
 
-    if (shop && hmac && host) {
-      console.log('shopify installation detected',{shop,hmac,host});
+    // Check if this is an installation request (has shop and hmac but NOT embedded)
+    if (shop && hmac && !embedded) {
+      console.log('Shopify installation detected', {shop, hmac, host});
+      setIsInstalling(true);
       
-      // Redirect to backend install API
+      // Redirect to backend install API only for installation, not when embedded
       const queryString = urlParams.toString();
-      console.log("queryString====>",queryString);
+      console.log("queryString====>", queryString);
       
       window.location.href = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
       return; // Exit early to prevent further execution
     }
-},[])  
 
-  useEffect(() => {
-    const getSessionId = async () => {
-      let storedSessionId = localStorage.getItem('session_id');
-      if (storedSessionId) {
-        setSessionId(storedSessionId);
-      } else {
-        try {
-          const response = await axios.post(`${import.meta.env.VITE_APP_API_URL}/create-session`, {}, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-          const data = response.data;
-          console.log(data, "data");
+    // If we're here, it means either:
+    // 1. No shop/hmac params (direct access to app)
+    // 2. App is embedded in Shopify admin (has embedded parameter)
+    // So we should initialize the chat session normally
+    initializeChatSession();
+  }, []);  
 
-          if (data.session_id) {
-            localStorage.setItem('session_id', data.session_id);
-            setSessionId(data.session_id);
-          } else {
-            console.warn('No session_id in response');
-            //   addMessage('Failed to initialize session. Please try again.', 'error');
-          }
-        } catch (error) {
-          console.error('Error fetching session_id:', error);
-          // addMessage('Unable to connect to session service. Please try again later.', 'error');
+  const initializeChatSession = async () => {
+    let storedSessionId = localStorage.getItem('session_id');
+    if (storedSessionId) {
+      setSessionId(storedSessionId);
+    } else {
+      try {
+        const response = await axios.post(`${import.meta.env.VITE_APP_API_URL}/create-session`, {}, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = response.data;
+        console.log(data, "data");
+
+        if (data.session_id) {
+          localStorage.setItem('session_id', data.session_id);
+          setSessionId(data.session_id);
+        } else {
+          console.warn('No session_id in response');
         }
+      } catch (error) {
+        console.error('Error fetching session_id:', error);
       }
-    };
+    }
+  };
 
-    getSessionId();
-  }, []);
+  // Show loading during installation
+  if (isInstalling) {
+    return (
+      <div className="w-screen h-screen flex justify-center items-center bg-gray-100">
+        <div className="text-center p-8 bg-white rounded-lg shadow-md max-w-md">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Installing App</h2>
+          <p className="text-gray-600">Please wait while we install the app...</p>
+        </div>
+      </div>
+    );
+  }
 
-
+  // Normal chat interface (for already installed app)
   return (
     <div className="w-screen h-screen flex justify-center items-center bg-gray-100">
       {/* WeChat Icon */}
@@ -218,7 +233,7 @@ useEffect(()=> {
       {/* Chatbox */}
       {isChatOpen && (
         <div className="w-[90%] max-w-md fixed bottom-5 right-5 flex flex-col items-end">
-          <Chatbox />
+          <Chatbox sessionId={sessionId} />
           <button
             onClick={toggleChat}
             className="mt-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors duration-200"
@@ -232,7 +247,6 @@ useEffect(()=> {
 }
 
 export default App;
-
 
 // import { useState } from 'react';
 // import { SiWechat } from 'react-icons/si';
