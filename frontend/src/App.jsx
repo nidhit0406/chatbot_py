@@ -228,6 +228,8 @@
 // }
 
 // export default App;
+
+
 import { useEffect, useState } from 'react';
 import { SiWechat } from 'react-icons/si';
 import Chatbox from './components/Chatbox';
@@ -247,25 +249,42 @@ function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const shop = urlParams.get('shop');
     const hmac = urlParams.get('hmac');
+    const host = urlParams.get('host');
 
     if (shop && hmac) {
       console.log('Shopify installation detected');
       setIsShopifyInstall(true);
       
-      // For embedded apps, use window.top to redirect the parent frame
-      if (window !== window.top) {
-        // We're in an iframe (Shopify admin)
-        const queryString = urlParams.toString();
-        window.top.location.href = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
+      const queryString = urlParams.toString();
+      const installUrl = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
+
+      // For embedded apps, use a full page redirect
+      if (host) {
+        // Create a form to submit and trigger a user gesture
+        const form = document.createElement('form');
+        form.method = 'GET';
+        form.action = installUrl;
+        form.target = '_top'; // Navigate the top window
+        document.body.appendChild(form);
+        
+        // Add a button and trigger click programmatically
+        const button = document.createElement('button');
+        button.type = 'submit';
+        button.style.display = 'none';
+        form.appendChild(button);
+        
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+          button.click();
+        }, 100);
       } else {
         // Direct access - redirect normally
-        const queryString = urlParams.toString();
-        window.location.href = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
+        window.location.href = installUrl;
       }
       return;
     }
 
-    // Normal session initialization
+    // Normal session initialization for regular chat usage
     console.log('Initializing normal chat session');
     const getSessionId = async () => {
       let storedSessionId = localStorage.getItem('session_id');
@@ -323,7 +342,7 @@ function App() {
       {/* Chatbox */}
       {isChatOpen && (
         <div className="w-[90%] max-w-md fixed bottom-5 right-5 flex flex-col items-end">
-          <Chatbox />
+          <Chatbox sessionId={sessionId} />
           <button
             onClick={toggleChat}
             className="mt-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors duration-200"
@@ -337,6 +356,7 @@ function App() {
 }
 
 export default App;
+
 
 // import { useState } from 'react';
 // import { SiWechat } from 'react-icons/si';
