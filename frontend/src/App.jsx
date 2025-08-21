@@ -154,6 +154,8 @@ function App() {
 
 useEffect(()=> {
    const urlParams = new URLSearchParams(window.location.search);
+   console.log("urlParams",urlParams);
+   
     const shop = urlParams.get('shop');
     const hmac = urlParams.get('hmac');
     const host = urlParams.get('host');
