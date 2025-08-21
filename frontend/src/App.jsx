@@ -155,17 +155,30 @@ function App() {
   console.log(sessionId, "sessionId");
   useEffect(() => {
 
+    // const urlParams = new URLSearchParams(window.location.search);
+    // const shop = urlParams.get('shop');
+    // const hmac = urlParams.get('hmac');
+
+    // if (shop && hmac) {
+    //   console.log('shopify installation detected');
+      
+    //   // Redirect to backend install API
+    //   const queryString = urlParams.toString();
+    //   window.location.href = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
+    //   return; // Exit early to prevent further execution
+    // }
+
     const urlParams = new URLSearchParams(window.location.search);
     const shop = urlParams.get('shop');
     const hmac = urlParams.get('hmac');
 
     if (shop && hmac) {
       console.log('shopify installation detected');
-      
-      // Redirect to backend install API
-      const queryString = urlParams.toString();
-      window.location.href = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
-      return; // Exit early to prevent further execution
+      // Instead of direct redirect, send a message to the parent window or handle via backend
+      if (window.parent) {
+        window.parent.postMessage({ type: 'shopifyInstall', shop, hmac }, '*');
+      }
+      return; // Exit early if Shopify installation is detected
     }
 
     console.log('sessionId changed');
