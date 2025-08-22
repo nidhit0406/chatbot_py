@@ -153,7 +153,6 @@ function App() {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    console.log("urlParams", urlParams);
     
     const shop = urlParams.get('shop');
     const hmac = urlParams.get('hmac');
@@ -162,21 +161,14 @@ function App() {
 
     // Check if this is an installation request (has shop and hmac but NOT embedded)
     if (shop && hmac && !embedded) {
-      console.log('Shopify installation detected', {shop, hmac, host});
       setIsInstalling(true);
       
-      // Redirect to backend install API only for installation, not when embedded
       const queryString = urlParams.toString();
-      console.log("queryString====>", queryString);
       
       window.location.href = `${import.meta.env.VITE_APP_BACKEND_URL}/install?${queryString}`;
-      return; // Exit early to prevent further execution
+      return;
     }
 
-    // If we're here, it means either:
-    // 1. No shop/hmac params (direct access to app)
-    // 2. App is embedded in Shopify admin (has embedded parameter)
-    // So we should initialize the chat session normally
     initializeChatSession();
   }, []);  
 
@@ -190,7 +182,6 @@ function App() {
           headers: { 'Content-Type': 'application/json' },
         });
         const data = response.data;
-        console.log(data, "data");
 
         if (data.session_id) {
           localStorage.setItem('session_id', data.session_id);
