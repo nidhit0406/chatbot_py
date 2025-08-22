@@ -470,7 +470,7 @@
     Array.from(document.getElementsByTagName('script')).pop();
 
   const config = {
-    apiUrl: currentScript.getAttribute('data-api-url') || "https://chatbot-bpy.clustersofttech.com/api/messages",
+    apiUrl: currentScript.getAttribute('data-api-url') || "https://n8nflow.byteztech.in/webhook/api/ask",
     sessionApiUrl: "http://103.39.131.9:8050/create-session",
     storeId: currentScript.getAttribute('data-store-id') || "116",
     welcomeMessage: currentScript.getAttribute('data-welcome-message') || "Hello! How can I help you today?",
@@ -789,12 +789,10 @@ async function addShopifyStoreAndRedirect(url, status, clientId, redirectUrl) {
         const response = await fetch(config.apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          // body: JSON.stringify({ question: messageText, sessionId, Store_id: config.storeId })
-          body: JSON.stringify({ text: messageText})
+          body: JSON.stringify({ question: messageText, sessionId, Store_id: config.storeId })
         });
         const data = await response.json();
-        // let botReply = data?.[0]?.output || 'Sorry, I could not understand.';
-        let botReply = data?.message?.text || 'Sorry, I could not understand.';
+        let botReply = data?.[0]?.output || 'Sorry, I could not understand.';
         addMessage(botReply, false);
       } catch (error) {
         addMessage("Sorry, I'm having trouble connecting.", false);
