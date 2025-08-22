@@ -470,7 +470,7 @@
     Array.from(document.getElementsByTagName('script')).pop();
 
   const config = {
-    apiUrl: currentScript.getAttribute('data-api-url') || "https://n8nflow.byteztech.in/webhook/api/ask",
+    apiUrl: currentScript.getAttribute('data-api-url') || "https://chatbot-bpy.clustersofttech.com//api/message",
     sessionApiUrl: "http://103.39.131.9:8050/create-session",
     storeId: currentScript.getAttribute('data-store-id') || "116",
     welcomeMessage: currentScript.getAttribute('data-welcome-message') || "Hello! How can I help you today?",
