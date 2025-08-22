@@ -793,7 +793,8 @@ async function addShopifyStoreAndRedirect(url, status, clientId, redirectUrl) {
           body: JSON.stringify({ text: messageText})
         });
         const data = await response.json();
-        let botReply = data?.[0]?.output || 'Sorry, I could not understand.';
+        // let botReply = data?.[0]?.output || 'Sorry, I could not understand.';
+        let botReply = data?.message?.text || 'Sorry, I could not understand.';
         addMessage(botReply, false);
       } catch (error) {
         addMessage("Sorry, I'm having trouble connecting.", false);
