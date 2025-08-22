@@ -556,8 +556,8 @@ async function addShopifyStoreAndRedirect(url, status, clientId, redirectUrl) {
     widget.style.position = 'fixed';
     widget.style.bottom = '20px';
     widget.style[config.position] = '20px';
-    widget.style.width = '350px';
-    widget.style.height = '500px';
+    widget.style.width = '450px';
+    widget.style.height = '550px';
     widget.style.backgroundColor = 'white';
     widget.style.borderRadius = '12px';
     widget.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
@@ -737,7 +737,7 @@ async function addShopifyStoreAndRedirect(url, status, clientId, redirectUrl) {
       bubble.style.display = 'flex';
       bubble.style.alignItems = 'flex-start';
       bubble.style.gap = '8px';
-      bubble.style.maxWidth = '80%';
+      bubble.style.maxWidth = '90%';
 
       if (!isUser) {
         const botIcon = document.createElement('div');
