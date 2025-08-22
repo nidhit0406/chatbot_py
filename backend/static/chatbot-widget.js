@@ -789,7 +789,8 @@ async function addShopifyStoreAndRedirect(url, status, clientId, redirectUrl) {
         const response = await fetch(config.apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: messageText, sessionId, Store_id: config.storeId })
+          // body: JSON.stringify({ question: messageText, sessionId, Store_id: config.storeId })
+          body: JSON.stringify({ text: messageText})
         });
         const data = await response.json();
         let botReply = data?.[0]?.output || 'Sorry, I could not understand.';
