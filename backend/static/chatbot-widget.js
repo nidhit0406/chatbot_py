@@ -21,34 +21,31 @@
     position: currentScript.getAttribute('data-position') || "right"
   };
 
-  const cacheKey = `chatbot_trainings_${config.storeId}`;
-  let trainingsData = null;
-
-  const cached = localStorage.getItem(cacheKey);
-  if (cached) {
-    trainingsData = JSON.parse(cached);
-    console.log("✅ Loaded trainings from cache for storeId:", config.storeId);
-  }
-
-  if (!trainingsData) {
+  async function fetchTrainings() {
     try {
+      console.log("Fetching trainings for storeId:", config.storeId);
       const res = await fetch(`https://chatbot-bpy.clustersofttech.com/trainlist?store_id=${encodeURIComponent(config.storeId)}`);
-      trainingsData = await res.json();
-      localStorage.setItem(cacheKey, JSON.stringify(trainingsData));
-      console.log("✅ Trainings fetched and cached for storeId:", config.storeId);
+      if (!res.ok) {
+        throw new Error(`HTTP error! Status: ${res.status}`);
+      }
+      const data = await res.json();
+      console.log("✅ Trainings fetched for storeId:", config.storeId);
+      return data;
     } catch (err) {
       console.error("❌ Error fetching trainings for storeId:", config.storeId, err);
-      trainingsData = { trainings: [] };
+      return { trainings: [] };
     }
   }
+
+  // Call fetchTrainings exactly once
+  const trainingsData = await fetchTrainings();
 
   if (trainingsData.trainings && trainingsData.trainings.length > 0) {
     console.log("✅ Trainings found for storeId:", config.storeId, "→ Initializing widget");
     initWidget(config);
   } else {
-    console.log("⚠️ No trainings found for storeId:", config.storeId, "→ Adding Shopify store and redirecting");
-    const shopUrl = window.location.hostname || "unknown-shop";
-    addShopifyStoreAndRedirect(shopUrl, "active", 20, `http://103.39.131.9:8011/login?store_id=${encodeURIComponent(config.storeId)}`);
+    console.log("⚠️ No trainings found for storeId:", config.storeId, "→ Redirecting to login");
+    window.location.href = `http://103.39.131.9:8011/login?store_id=${encodeURIComponent(config.storeId)}`;
   }
 })();
 
