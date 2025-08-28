@@ -253,28 +253,99 @@ def clear_messages():
     ]
     return jsonify({"status": "success", "message": "Chat history cleared"})
 
+# @app.route('/trainlist', methods=['GET'])
+# def get_trainlist():
+#     store_id = request.args.get('store_id')
+#     if not store_id:
+#         return jsonify({"message": "store_id parameter is required!"}), 400
+
+#     try:
+#         conn = get_db_connection()
+#         cursor = conn.cursor(cursor_factory=RealDictCursor)
+#         cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE id = %s", (store_id,))
+#         store = cursor.fetchone()
+
+#         if not store:
+#             conn.close()
+#             return jsonify({"message": "Store not found!"}), 404
+
+#         cursor.execute("SELECT id AS client_id, email, created_at FROM client WHERE id = %s", (store["client_id"],))
+#         client = cursor.fetchone()
+
+#         if not client:
+#             conn.close()
+#             return jsonify({"message": "Client not found!"}), 404
+
+#         cursor.execute(
+#             """
+#             SELECT id AS training_id, created_at, store_id, file_jsonl, jsonl_status, 
+#                    file_id, model_id, status, error_message, try, client_id, is_running, website_url
+#             FROM training
+#             WHERE store_id = %s
+#             ORDER BY created_at DESC
+#             """,
+#             (store_id,)
+#         )
+#         training_records = cursor.fetchall()
+#         conn.close()
+
+#         return jsonify({
+#             "client_id": client["client_id"],
+#             "email": client["email"],
+#             "created_at": client["created_at"].isoformat() if client["created_at"] else None,
+#             "store": {
+#                 "store_id": store["store_id"],
+#                 "name": store["name"],
+#             },
+#             "trainings": [
+#                 {
+#                     "training_id": record["training_id"],
+#                     "created_at": record["created_at"].isoformat() if record["created_at"] else None,
+#                     "store_id": record["store_id"],
+#                     "file_jsonl": record["file_jsonl"],
+#                     "jsonl_status": record["jsonl_status"],
+#                     "file_id": record["file_id"],
+#                     "model_id": record["model_id"],
+#                     "status": record["status"],
+#                     "error_message": record["error_message"],
+#                     "try": record["try"],
+#                     "client_id": record["client_id"],
+#                     "is_running": record["is_running"],
+#                     "website_url": record["website_url"]
+#                 }
+#                 for record in training_records
+#             ]
+#         }), 200
+
+#     except Exception as e:
+#         print(f"Error===: {e}")
+#         return jsonify({"message": "Error occurred, please try again."}), 500
+
 @app.route('/trainlist', methods=['GET'])
 def get_trainlist():
-    store_id = request.args.get('store_id')
-    if not store_id:
-        return jsonify({"message": "store_id parameter is required!"}), 400
+    domain = request.args.get('domain')
+    if not domain:
+        return jsonify({"message": "domain parameter is required!", "state": {"storeExists": False, "hasTrainings": False}}), 400
 
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE id = %s", (store_id,))
+        # Query store table using url to get store_id
+        cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE url = %s", (domain,))
         store = cursor.fetchone()
+
+        state = {"storeExists": bool(store), "hasTrainings": False}
 
         if not store:
             conn.close()
-            return jsonify({"message": "Store not found!"}), 404
+            return jsonify({"message": "Store not found for the provided domain!", "state": state}), 404
 
         cursor.execute("SELECT id AS client_id, email, created_at FROM client WHERE id = %s", (store["client_id"],))
         client = cursor.fetchone()
 
         if not client:
             conn.close()
-            return jsonify({"message": "Client not found!"}), 404
+            return jsonify({"message": "Client not found!", "state": {"storeExists": True, "hasTrainings": False}}), 404
 
         cursor.execute(
             """
@@ -284,12 +355,16 @@ def get_trainlist():
             WHERE store_id = %s
             ORDER BY created_at DESC
             """,
-            (store_id,)
+            (store["store_id"],)
         )
         training_records = cursor.fetchall()
+        state["hasTrainings"] = bool(training_records)
+
         conn.close()
 
         return jsonify({
+            "message": "Success",
+            "state": state,
             "client_id": client["client_id"],
             "email": client["email"],
             "created_at": client["created_at"].isoformat() if client["created_at"] else None,
@@ -318,9 +393,11 @@ def get_trainlist():
         }), 200
 
     except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({"message": "Error occurred, please try again."}), 500
+        print(f"Error===: {e}")
+        return jsonify({"message": "Error occurred, please try again.", "state": {"storeExists": False, "hasTrainings": False}}), 500
+    
 
+    
 @app.route('/shopify-store', methods=['POST'])
 def add_shopify_store():
     data = request.get_json()
