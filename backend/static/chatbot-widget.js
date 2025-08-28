@@ -45,10 +45,10 @@
     // Handle navigation based on state
     if (!trainingsData.state || !trainingsData.state.storeExists) {
       console.log("⚠️ Store not found, redirecting to sign-up for store:", config.store);
-      // window.location.href = `http://localhost:3000/signup?store=chat-box-bot.myshopify.com`;
+      window.location.href = `http://localhost:3000/login?store=chat-box-bot.myshopify.com`;
     } else if (!trainingsData.state.hasTrainings) {
       console.log("⚠️ No trainings found for store:", config.store, "→ Redirecting to login");
-      // window.location.href = `http://localhost:3000/login?store=chat-box-bot.myshopify.com`;
+      window.location.href = `http://localhost:3000/login?store=chat-box-bot.myshopify.com`;
     } else {
       console.log("✅ Trainings found for store:", config.store, "→ Initializing widget");
       initWidget(config);
