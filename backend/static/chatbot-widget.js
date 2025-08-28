@@ -13,7 +13,7 @@
     const config = {
       apiUrl: currentScript.getAttribute('data-api-url') || "https://n8nflow.byteztech.in/webhook/api/ask",
       sessionApiUrl: "http://103.39.131.9:8050/create-session",
-      store: store, // Renamed from storeId to store
+      store: store,
       welcomeMessage: currentScript.getAttribute('data-welcome-message') || "Hello! How can I help you today?",
       primaryColor: currentScript.getAttribute('data-primary-color') || "#8B5CF6",
       secondaryColor: currentScript.getAttribute('data-secondary-color') || "#6D28D9",
@@ -21,37 +21,44 @@
       position: currentScript.getAttribute('data-position') || "right"
     };
 
-    let storeIdFromApi = null; // To store the store_id from API response
+    let storeIdFromApi = null;
+    let clientIdFromApi = null;
+    let clientEmailFromApi = null;
 
     async function fetchTrainings() {
       try {
         console.log("Fetching trainings for store:", config.store);
         const res = await fetch(`https://chatbot-bpy.clustersofttech.com/trainlist?domain=${encodeURIComponent(config.store)}`);
         const data = await res.json();
-        console.log("✅ Trainings fetched for store:",  data);
+        console.log("✅ Trainings fetched for store:", config.store, data);
         if (data.state && data.state.storeExists) {
-          storeIdFromApi = data.store.store_id; // Extract store_id from API response
+          storeIdFromApi = data.store.store_id;
+          clientIdFromApi = data.client_id;
+          clientEmailFromApi = data.email;
+        } else if (data.state && data.state.clientExists) {
+          clientIdFromApi = data.client_id;
+          clientEmailFromApi = data.email;
         }
         return data;
       } catch (err) {
         console.error("❌ Error fetching trainings for store:", config.store, err);
-        return { trainings: [], message: "Error occurred while fetching trainings" };
+        return { state: { storeExists: false, clientExists: false, hasTrainings: false } };
       }
     }
 
     // Call fetchTrainings exactly once
     const trainingsData = await fetchTrainings();
 
-    // Handle navigation based on state
-    if (!trainingsData.state || !trainingsData.state.storeExists) {
-      console.log("⚠️ Store not found, redirecting to sign-up for store:", config.store);
-      window.location.href = `http://localhost:3000/login?store=chat-box-bot.myshopify.com`;
-    } else if (!trainingsData.state.hasTrainings) {
-      console.log("⚠️ No trainings found for store:", config.store, "→ Redirecting to login");
-      window.location.href = `http://localhost:3000/login?store=chat-box-bot.myshopify.com`;
+    // Handle navigation and client management based on state
+    if (trainingsData.state.storeExists && trainingsData.state.hasTrainings) {
+      console.log("✅ Trainings found for store:", config.store, "→ Initializing widget with client_id:", clientIdFromApi);
+      initWidget(config, clientIdFromApi);
+    } else if (trainingsData.state.clientExists) {
+      console.log("⚠️ Client exists but no store/trainings, redirecting to login with prefilled email:", clientEmailFromApi);
+      window.location.href = `http://localhost:3000/login?store=${encodeURIComponent(config.store)}&email=${encodeURIComponent(clientEmailFromApi || '')}`;
     } else {
-      console.log("✅ Trainings found for store:", config.store, "→ Initializing widget");
-      initWidget(config);
+      console.log("⚠️ No client/store, redirecting to sign-up for store:", config.store);
+      window.location.href = `http://localhost:3000/login?store=${encodeURIComponent(config.store)}`;
     }
   })();
 
@@ -318,7 +325,7 @@
         const response = await fetch(config.apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: messageText, sessionId, store_id: storeIdFromApi || config.store }) // Use store_id from API if available
+          body: JSON.stringify({ question: messageText, sessionId, store_id: storeIdFromApi || config.store })
         });
         const data = await response.json();
         let botReply = data?.[0]?.output || 'Sorry, I could not understand.';
