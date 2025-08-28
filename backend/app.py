@@ -338,14 +338,14 @@ def get_trainlist():
 
         if not store:
             conn.close()
-            return jsonify({"message": "Store not found for the provided domain!", "state": state}), 404
+            return jsonify({"message": "Store not found for the provided domain!", "state": state}), 200
 
         cursor.execute("SELECT id AS client_id, email, created_at FROM client WHERE id = %s", (store["client_id"],))
         client = cursor.fetchone()
 
         if not client:
             conn.close()
-            return jsonify({"message": "Client not found!", "state": {"storeExists": True, "hasTrainings": False}}), 404
+            return jsonify({"message": "Client not found!", "state": {"storeExists": True, "hasTrainings": False}}), 200
 
         cursor.execute(
             """
@@ -397,7 +397,7 @@ def get_trainlist():
         return jsonify({"message": "Error occurred, please try again.", "state": {"storeExists": False, "hasTrainings": False}}), 500
     
 
-    
+
 @app.route('/shopify-store', methods=['POST'])
 def add_shopify_store():
     data = request.get_json()
