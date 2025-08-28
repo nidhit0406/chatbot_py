@@ -45,7 +45,8 @@
     initWidget(config);
   } else {
     console.log("⚠️ No trainings found for storeId:", config.storeId, "→ Redirecting to login");
-    window.location.href = `http://103.39.131.9:8011/login?store_id=${encodeURIComponent(config.storeId)}`;
+    // window.location.href = `http://103.39.131.9:8011/login?store_id=${encodeURIComponent(config.storeId)}`;
+    window.location.href = `http://localhost:3000//login?store_id=${encodeURIComponent(config.storeId)}`;
   }
 })();
 
