@@ -358,15 +358,7 @@ def get_trainlist():
                 )
                 training_records = cursor.fetchall()
                 state["hasTrainings"] = bool(training_records)
-        else:
-            # Check if client exists for similar domain (e.g., user has other stores)
-            cursor.execute(
-                "SELECT c.id AS client_id, c.email, c.created_at FROM client c JOIN store s ON c.id = s.client_id WHERE s.url LIKE %s",
-                (f"%{domain}%",)
-            )
-            client = cursor.fetchone()
-            state["clientExists"] = bool(client)
-
+        
         conn.close()
 
         return jsonify({
@@ -399,7 +391,6 @@ def get_trainlist():
     except Exception as e:
         print(f"Error===: {e}")
         return jsonify({"message": "Error occurred, please try again.", "state": {"storeExists": False, "clientExists": False, "hasTrainings": False}}), 500
-
 
 
 @app.route('/shopify-store', methods=['POST'])
