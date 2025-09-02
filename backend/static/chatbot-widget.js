@@ -1,6 +1,6 @@
-(function() {
+(function () {
   (async function () {
-    const currentScript = document.currentScript || 
+    const currentScript = document.currentScript ||
       Array.from(document.getElementsByTagName('script')).pop();
 
     let store = currentScript.getAttribute('data-store-id');
@@ -25,24 +25,51 @@
     let clientIdFromApi = null;
     let clientEmailFromApi = null;
 
+    // async function fetchTrainings() {
+    //   try {
+    //     console.log("Fetching trainings for store:", config.store);
+    //     const res = await fetch(`https://chatbot-bpy.clustersofttech.com/trainlist?domain=${encodeURIComponent(config.store)}`);
+    //     const data = await res.json();
+    //     console.log("✅ Trainings fetched for store:", config.store, data);
+    //     if (data.state && data.state.storeExists) {
+    //       storeIdFromApi = data.store.store_id;
+    //       clientIdFromApi = data.client_id;
+    //       clientEmailFromApi = data.email;
+    //     } else if (data.state && data.state.clientExists) {
+    //       clientIdFromApi = data.client_id;
+    //       clientEmailFromApi = data.email;
+    //     }
+    //     return data;
+    //   } catch (err) {
+    //     console.error("❌ Error fetching trainings for store:", config.store, err);
+    //     return { state: { storeExists: false, clientExists: false, hasTrainings: false } };
+    //   }
+    // }
+
     async function fetchTrainings() {
       try {
         console.log("Fetching trainings for store:", config.store);
-        const res = await fetch(`https://chatbot-bpy.clustersofttech.com/trainlist?domain=${encodeURIComponent(config.store)}`);
+        const res = await fetch(
+          `https://chatbot-bpy.clustersofttech.com/trainlist?domain=${encodeURIComponent(config.store)}`
+        );
         const data = await res.json();
+
         console.log("✅ Trainings fetched for store:", config.store, data);
-        if (data.state && data.state.storeExists) {
-          storeIdFromApi = data.store.store_id;
-          clientIdFromApi = data.client_id;
-          clientEmailFromApi = data.email;
-        } else if (data.state && data.state.clientExists) {
-          clientIdFromApi = data.client_id;
-          clientEmailFromApi = data.email;
-        }
+
+        // Extract values safely
+        storeIdFromApi = data?.store?.store_id || null;
+        clientIdFromApi = data?.client_id || null;
+        clientEmailFromApi = data?.email || null;
+
+        console.log("Extracted values - storeIdFromApi:", storeIdFromApi, "clientIdFromApi:", clientIdFromApi, "clientEmailFromApi:", clientEmailFromApi);
+        
+
         return data;
       } catch (err) {
         console.error("❌ Error fetching trainings for store:", config.store, err);
-        return { state: { storeExists: false, clientExists: false, hasTrainings: false } };
+        return {
+          state: { storeExists: false, clientExists: false, hasTrainings: false },
+        };
       }
     }
 
@@ -60,11 +87,47 @@
     //   console.log("⚠️ No client/store, redirecting to sign-up for store:", config.store);
     //   window.location.href = `http://localhost:3000/login?store=${encodeURIComponent(config.store)}`;
     // }
+
+    if (trainingsData.state.storeExists && trainingsData.state.hasTrainings) {
+      // ✅ Case 1: Store & Trainings exist → init widget
+      console.log(
+        "✅ Trainings found for store:",
+        config.store,
+        "→ Initializing widget with client_id:",
+        clientIdFromApi
+      );
+      initWidget(config, clientIdFromApi);
+
+    } else if (trainingsData.state.storeExists  && !trainingsData.state.clientExists) {
+      // ⚠️ Case 2: Store exists but NO trainings → redirect with store+email
+      console.log(
+        "⚠️ Store exists but no trainings, redirecting with email:",
+        clientEmailFromApi
+      );
+      window.location.href =
+        `http://localhost:3000/login?store=${encodeURIComponent(config.store)}`;
+
+    } else if (trainingsData.state.clientExists) {
+      // ⚠️ Case 3: Client exists but no store → redirect with store+email
+      console.log(
+        "⚠️ Client exists but no store, redirecting with email:",
+        clientEmailFromApi
+      );
+      window.location.href =
+        `http://localhost:3000/login?store=${encodeURIComponent(config.store)}` +
+        (clientEmailFromApi ? `&email=${encodeURIComponent(clientEmailFromApi)}` : "");
+
+    } else {
+      // ⚠️ Case 4: Neither store nor client exist → redirect with only store
+      console.log("⚠️ No client/store, redirecting to sign-up for store:", config.store);
+      window.location.href =
+        `http://localhost:3000/login?store=${encodeURIComponent(config.store)}`;
+    }
   })();
 
   async function addShopifyStoreAndRedirect(url, status, clientId, redirectUrl) {
     console.log("Adding Shopify store:", url, status, clientId, redirectUrl);
-    
+
     try {
       const response = await fetch("https://chatbot-bpy.clustersofttech.com/shopify-store", {
         method: "POST",
@@ -118,12 +181,12 @@
     header.style.padding = '12px 16px';
     header.style.background = `linear-gradient(to right, ${config.primaryColor}, ${config.secondaryColor})`;
     header.style.color = 'white';
-    
+
     const headerTitle = document.createElement('div');
     headerTitle.style.display = 'flex';
     headerTitle.style.alignItems = 'center';
     headerTitle.style.gap = '8px';
-    
+
     const botIcon = document.createElement('div');
     botIcon.innerHTML = `
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -165,7 +228,7 @@
     inputArea.style.display = 'flex';
     inputArea.style.gap = '8px';
     inputArea.style.background = 'white';
-    
+
     const input = document.createElement('input');
     input.type = 'text';
     input.placeholder = 'Type your message...';
@@ -175,7 +238,7 @@
     input.style.borderRadius = '9999px';
     input.style.outline = 'none';
     input.style.fontSize = '14px';
-    
+
     const sendButton = document.createElement('button');
     sendButton.innerHTML = `
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -263,7 +326,7 @@
     }
 
     function addMessage(text, isUser) {
-      const realTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+      const realTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const message = document.createElement('div');
       message.style.display = 'flex';
       message.style.flexDirection = 'column';
