@@ -40,9 +40,15 @@ shops_db = {}  # {shop_domain: {access_token: str, chat_history: list}}
 products_db = {}  # {shop_domain: [product1, product2...]}
 
 # Database Connection Setup
-password = "Dcmh#2026"
+# password = "Dcmh#2026"
+# escaped_password = urllib.parse.quote_plus(password)
+# DATABASE_URI = f'postgresql://shopifyai:{escaped_password}@103.39.131.9:5432/shopifyai'
+password = "postgres"
 escaped_password = urllib.parse.quote_plus(password)
-DATABASE_URI = f'postgresql://shopifyai:{escaped_password}@103.39.131.9:5432/shopifyai'
+
+# Setup PostgreSQL connection details with escaped password
+# DATABASE_URI = f'postgresql://shopifyai:{escaped_password}@103.39.131.9:5432/shopifyai'
+DATABASE_URI = f'postgresql://postgres:postgres@localhost:5432/shopify_ai'
 
 def get_db_connection():
     return psycopg2.connect(DATABASE_URI, cursor_factory=RealDictCursor)

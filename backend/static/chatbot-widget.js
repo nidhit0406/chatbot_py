@@ -50,16 +50,16 @@
     const trainingsData = await fetchTrainings();
 
     // Handle navigation and client management based on state
-    if (trainingsData.state.storeExists && trainingsData.state.hasTrainings) {
-      console.log("✅ Trainings found for store:", config.store, "→ Initializing widget with client_id:", clientIdFromApi);
-      initWidget(config, clientIdFromApi);
-    } else if (trainingsData.state.clientExists) {
-      console.log("⚠️ Client exists but no store/trainings, redirecting to login with prefilled email:", clientEmailFromApi);
-      window.location.href = `http://localhost:3000/login?store=${encodeURIComponent(config.store)}&email=${encodeURIComponent(clientEmailFromApi || '')}`;
-    } else {
-      console.log("⚠️ No client/store, redirecting to sign-up for store:", config.store);
-      window.location.href = `http://localhost:3000/login?store=${encodeURIComponent(config.store)}`;
-    }
+    // if (trainingsData.state.storeExists && trainingsData.state.hasTrainings) {
+    //   console.log("✅ Trainings found for store:", config.store, "→ Initializing widget with client_id:", clientIdFromApi);
+    //   initWidget(config, clientIdFromApi);
+    // } else if (trainingsData.state.clientExists) {
+    //   console.log("⚠️ Client exists but no store/trainings, redirecting to login with prefilled email:", clientEmailFromApi);
+    //   window.location.href = `http://localhost:3000/login?store=${encodeURIComponent(config.store)}&email=${encodeURIComponent(clientEmailFromApi || '')}`;
+    // } else {
+    //   console.log("⚠️ No client/store, redirecting to sign-up for store:", config.store);
+    //   window.location.href = `http://localhost:3000/login?store=${encodeURIComponent(config.store)}`;
+    // }
   })();
 
   async function addShopifyStoreAndRedirect(url, status, clientId, redirectUrl) {
