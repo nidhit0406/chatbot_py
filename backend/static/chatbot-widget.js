@@ -51,7 +51,7 @@
         console.log("Fetching trainings for store:", config.store);
         const res = await fetch(
           // `https://chatbot-bpy.clustersofttech.com/trainlist?domain=${encodeURIComponent(config.store)}`
-          `https://chatbot-bpy.clustersofttech.com/trainlist?domain=${encodeURIComponent(config.store)}`
+          `http://127.0.0.1:5000/trainlist?domain=${encodeURIComponent(config.store)}`
         );
         const data = await res.json();
 
