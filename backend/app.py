@@ -117,6 +117,53 @@ def install():
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
     return redirect(install_url)
 
+# @app.route('/auth/callback')
+# def auth_callback():
+#     shop = request.args.get('shop')
+#     code = request.args.get('code')
+#     hmac_param = request.args.get('hmac')
+    
+#     if not all([shop, code, hmac_param]):
+#         return jsonify({"error": "Missing required parameters"}), 400
+    
+#     if not validate_hmac(request.args):
+#         return jsonify({"error": "Invalid HMAC"}), 403
+    
+#     try:
+#         # 1. Get access token
+#         token_url = f"https://{shop}/admin/oauth/access_token"
+#         token_response = requests.post(token_url, json={
+#             'client_id': SHOPIFY_API_KEY,
+#             'client_secret': SHOPIFY_API_SECRET,
+#             'code': code
+#         })
+#         token_response.raise_for_status()
+#         access_token = token_response.json()['access_token']
+        
+ 
+#         # 2. Embed app in Shopify admin with dynamic widget.js
+#         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+#         requests.post(embed_url, json={
+#             "script_tag": {
+#                 "src": f"{APP_URL}/widget.js?shop={shop}",
+#                 "event": "onload"
+#             }
+#         }, headers={
+#             "X-Shopify-Access-Token": access_token
+#         })
+#         # return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
+#         return redirect(f"http://localhost:3000/login?store={shop}")
+    
+#     except requests.exceptions.RequestException as e:
+#         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
+#         print(f"OAuth Error: {error_data}")
+#         return jsonify({
+#             "error": "Installation failed",
+#             "details": error_data
+#         }), 500
+
+print("test-------------------------------------------------------------")
+
 @app.route('/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
@@ -140,42 +187,66 @@ def auth_callback():
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
 
-
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE url = %s", (shop,))
-        store = cursor.fetchone()
-
+        # 2. Try to find store and client info in database
         client_id = None
         email = None
+        
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            
+            # Normalize shop URL for comparison (remove protocol if present)
+            normalized_shop = shop.replace('https://', '').replace('http://', '').rstrip('/')
+            print(f"Looking up shop: {shop}")
+            print(f"Normalized shop: {normalized_shop}")
+            
+            # Look for store by URL
+            cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE url = %s", (normalized_shop,))
+            store = cursor.fetchone()
 
-        if store:
-            cursor.execute("SELECT id AS client_id, email FROM client WHERE id = %s", (store["client_id"],))
-            client = cursor.fetchone()
-            if client:
-                client_id = client["client_id"]
-                email = client["email"]
+            if store:
+                print(f"Found store: {store}")
+            else:
+                print("No store found in database")
 
-        conn.close()
+            if store:
+                # Look for client info
+                cursor.execute("SELECT id AS client_id, email FROM client WHERE id = %s", (store["client_id"],))
+                client = cursor.fetchone()
+                if client:
+                    client_id = client["client_id"]
+                    email = client["email"]
+            
+            conn.close()
+            
+        except Exception as db_error:
+            print(f"Database lookup warning: {db_error}")
+            # Continue even if database lookup fails - this is not critical for installation
+        
+        # 3. Embed app in Shopify admin with dynamic widget.js
+        try:
+            embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+            requests.post(embed_url, json={
+                "script_tag": {
+                    "src": f"{APP_URL}/widget.js?shop={shop}",
+                    "event": "onload"
+                }
+            }, headers={
+                "X-Shopify-Access-Token": access_token,
+                "Content-Type": "application/json"
+            })
+        except Exception as embed_error:
+            print(f"Script tag embedding warning: {embed_error}")
+            # Continue even if script tag embedding fails
 
- 
-        # 2. Embed app in Shopify admin with dynamic widget.js
-        embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-        requests.post(embed_url, json={
-            "script_tag": {
-                "src": f"{APP_URL}/widget.js?shop={shop}",
-                "event": "onload"
-            }
-        }, headers={
-            "X-Shopify-Access-Token": access_token
-        })
-        # return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
-        if client_id and email:
-            return redirect(
-                f"http://localhost:3000/login?store={shop}&client_id={client_id}&email={email}"
-            )
-        else:
-            return redirect(f"http://localhost:3000/login?store={shop}")
+        # 4. Redirect with available information
+        redirect_params = f"store={shop}"
+        if client_id:
+            redirect_params += f"&client_id={client_id}"
+        if email:
+            redirect_params += f"&email={email}"
+        
+        return redirect(f"http://localhost:3000/login?{redirect_params}")
     
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
@@ -184,6 +255,7 @@ def auth_callback():
             "error": "Installation failed",
             "details": error_data
         }), 500
+
 
 @app.route('/widget.js')
 def serve_widget_js():
