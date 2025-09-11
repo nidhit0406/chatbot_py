@@ -162,7 +162,7 @@ def install():
 #             "details": error_data
 #         }), 500
 
-print("test-------------------------------------------------------------")
+print(f"test-------------------------------------------------------------, {SHOPIFY_API_KEY}")
 
 @app.route('/auth/callback')
 def auth_callback():
@@ -192,12 +192,14 @@ def auth_callback():
         email = None
         
         try:
+
+            print("Looking up shop: {shop}")
+            print(f"Looking up shop: {shop}")
             conn = get_db_connection()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             # Normalize shop URL for comparison (remove protocol if present)
             normalized_shop = shop.replace('https://', '').replace('http://', '').rstrip('/')
-            print(f"Looking up shop: {shop}")
             print(f"Normalized shop: {normalized_shop}")
             
             # Look for store by URL
