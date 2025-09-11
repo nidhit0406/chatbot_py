@@ -174,7 +174,7 @@ def auth_callback():
         return jsonify({"error": "Invalid HMAC"}), 403
 
     try:
-        # 1) Get Shopify Access Token
+        # 1. Get access token
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
             'client_id': SHOPIFY_API_KEY,
@@ -184,7 +184,7 @@ def auth_callback():
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
 
-        # 2) Inject ScriptTag for widget.js
+        # 2. Embed app in Shopify admin with dynamic widget.js
         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
         requests.post(embed_url, json={
             "script_tag": {
@@ -195,27 +195,34 @@ def auth_callback():
             "X-Shopify-Access-Token": access_token
         })
 
-        # 3) Query your DB for store/client details before redirect
+        # 3. Get client_id + email from DB using shop
+        client_id = None
+        client_email = None
         conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT client_id, email FROM clients WHERE shop_url = %s", (shop,))
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT client_id, email FROM clients WHERE shop_domain = %s", (shop,))
+                row = cur.fetchone()
+                if row:
+                    client_id = row.get("client_id")
+                    client_email = row.get("email")
+        finally:
+            conn.close()
 
-        # Build redirect based on DB result (just like your JS logic)
+        # 4. Redirect with store + optional email/client_id
         redirect_url = f"http://localhost:3000/login?store={shop}"
-        if row:
-            client_id, email = row
-            if client_id and email:
-                redirect_url += f"&client_id={client_id}&email={email}"
+        if client_id and client_email:
+            redirect_url += f"&client_id={client_id}&email={client_email}"
 
         return redirect(redirect_url)
 
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
         print(f"OAuth Error: {error_data}")
-        return jsonify({"error": "Installation failed", "details": error_data}), 500
+        return jsonify({
+            "error": "Installation failed",
+            "details": error_data
+        }), 500
 
 
 
