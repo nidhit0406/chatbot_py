@@ -140,21 +140,10 @@ def auth_callback():
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
 
-        print("==================>111111" )
+
         conn = get_db_connection()
-        print("==================>22222222" )
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        print("==================>33333333" )
-        # cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE url = %s", (shop,))
-        # Normalize shop domain
-        normalized_shop = shop.replace("https://", "").replace("http://", "").strip("/")
-        print("==================>",normalized_shop )
-
-        cursor.execute(
-            "SELECT id AS store_id, name, client_id FROM store WHERE url = %s",
-            (normalized_shop,)
-        )
-
+        cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE url = %s", (shop,))
         store = cursor.fetchone()
 
         client_id = None
@@ -195,10 +184,6 @@ def auth_callback():
             "error": "Installation failed",
             "details": error_data
         }), 500
-
-    except Exception as e:
-        print(f"Database Error: {e}")
-        return jsonify({"error": "Database lookup failed"}), 500
 
 @app.route('/widget.js')
 def serve_widget_js():
