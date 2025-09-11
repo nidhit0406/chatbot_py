@@ -162,7 +162,6 @@ def install():
 #             "details": error_data
 #         }), 500
 
-print(f"test-------------------------------------------------------------, {SHOPIFY_API_KEY}")
 
 @app.route('/auth/callback')
 def auth_callback():
@@ -176,7 +175,11 @@ def auth_callback():
     if not validate_hmac(request.args):
         return jsonify({"error": "Invalid HMAC"}), 403
     
+
+
     try:
+
+
         # 1. Get access token
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
@@ -184,17 +187,22 @@ def auth_callback():
             'client_secret': SHOPIFY_API_SECRET,
             'code': code
         })
+        print("test1-------------------------------------------------------------")
         token_response.raise_for_status()
+        print("test2-------------------------------------------------------------")
         access_token = token_response.json()['access_token']
 
         # 2. Try to find store and client info in database
+
+        print(f"Looking up shop: {shop}")
+
         client_id = None
         email = None
+        
         
         try:
 
             print("Looking up shop: {shop}")
-            print(f"Looking up shop: {shop}")
             conn = get_db_connection()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             
