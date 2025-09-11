@@ -117,71 +117,20 @@ def install():
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
     return redirect(install_url)
 
-# @app.route('/auth/callback')
-# def auth_callback():
-#     shop = request.args.get('shop')
-#     code = request.args.get('code')
-#     hmac_param = request.args.get('hmac')
-    
-#     if not all([shop, code, hmac_param]):
-#         return jsonify({"error": "Missing required parameters"}), 400
-    
-#     if not validate_hmac(request.args):
-#         return jsonify({"error": "Invalid HMAC"}), 403
-    
-#     try:
-#         # 1. Get access token
-#         token_url = f"https://{shop}/admin/oauth/access_token"
-#         token_response = requests.post(token_url, json={
-#             'client_id': SHOPIFY_API_KEY,
-#             'client_secret': SHOPIFY_API_SECRET,
-#             'code': code
-#         })
-#         token_response.raise_for_status()
-#         access_token = token_response.json()['access_token']
- 
-#         # 2. Embed app in Shopify admin with dynamic widget.js
-#         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-#         requests.post(embed_url, json={
-#             "script_tag": {
-#                 "src": f"{APP_URL}/widget.js?shop={shop}",
-#                 "event": "onload"
-#             }
-#         }, headers={
-#             "X-Shopify-Access-Token": access_token
-#         })
-#         return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
-    
-#     except requests.exceptions.RequestException as e:
-#         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
-#         print(f"OAuth Error: {error_data}")
-#         return jsonify({
-#             "error": "Installation failed",
-#             "details": error_data
-#         }), 500
-
-def get_client_info_from_db(shop):
-    # Example: query your DB to get client info for this shop
-    result = db.query("SELECT client_id, email FROM clients WHERE shop=%s", (shop,))
-    if result:
-        return {"client_id": result[0]["client_id"], "email": result[0]["email"]}
-    return None
 @app.route('/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
     code = request.args.get('code')
     hmac_param = request.args.get('hmac')
-
-    # ✅ Validate required params
+    
     if not all([shop, code, hmac_param]):
         return jsonify({"error": "Missing required parameters"}), 400
-
-    # ✅ Validate HMAC (security check)
+    
     if not validate_hmac(request.args):
         return jsonify({"error": "Invalid HMAC"}), 403
-
+    
     try:
-        # 1️⃣ Exchange temporary code for a permanent access token
+        # 1. Get access token
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
             'client_id': SHOPIFY_API_KEY,
@@ -190,35 +139,20 @@ def auth_callback():
         })
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
-
-        # 2️⃣ (Optional) Inject ScriptTag for widget.js
-        try:
-            embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-            requests.post(embed_url, json={
-                "script_tag": {
-                    "src": f"{APP_URL}/widget.js?shop={shop}",
-                    "event": "onload"
-                }
-            }, headers={
-                "X-Shopify-Access-Token": access_token
-            })
-        except requests.exceptions.RequestException as e:
-            print(f"⚠️ ScriptTag injection failed: {str(e)}")
-
-        # 3️⃣ Fetch client/user info (like your trainlist API)
-        client_info = get_client_info_from_db(shop)
-
-        # 4️⃣ Build frontend redirect URL
-        FRONTEND_URL = "http://localhost:3000"  # ⬅ change to your Vercel/production URL when live
-        if client_info:
-            email = urllib.parse.quote_plus(client_info["email"])
-            client_id = urllib.parse.quote_plus(str(client_info["client_id"]))
-            redirect_url = f"{FRONTEND_URL}/login?store={shop}&email={email}&client_id={client_id}"
-        else:
-            redirect_url = f"{FRONTEND_URL}/login?store={shop}"
-
-        return redirect(redirect_url)
-
+ 
+        # 2. Embed app in Shopify admin with dynamic widget.js
+        embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+        requests.post(embed_url, json={
+            "script_tag": {
+                "src": f"{APP_URL}/widget.js?shop={shop}",
+                "event": "onload"
+            }
+        }, headers={
+            "X-Shopify-Access-Token": access_token
+        })
+        # return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
+         return redirect(f"http://localhost:3000/login?store={shop}")
+    
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
         print(f"OAuth Error: {error_data}")
@@ -226,29 +160,6 @@ def auth_callback():
             "error": "Installation failed",
             "details": error_data
         }), 500
-
-
-# ✅ Implement this helper to fetch client info
-# def get_client_info_from_db(shop):
-#     """
-#     Replace with your actual database logic.
-#     Should return {"client_id": "...", "email": "..."} if client exists, else None.
-#     """
-#     try:
-#         # Example pseudo-code (replace with your DB queries)
-#         # result = db.session.execute("SELECT client_id, email FROM clients WHERE shop = :shop", {"shop": shop}).fetchone()
-#         # if result:
-#         #     return {"client_id": result.client_id, "email": result.email}
-#         return None  # Default: no client found
-#     except Exception as e:
-#         print(f"⚠️ Failed to fetch client info: {str(e)}")
-#         return None
-
-
-
-
-
-
 
 @app.route('/widget.js')
 def serve_widget_js():
