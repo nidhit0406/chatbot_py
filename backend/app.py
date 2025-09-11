@@ -166,15 +166,15 @@ def auth_callback():
     shop = request.args.get('shop')
     code = request.args.get('code')
     hmac_param = request.args.get('hmac')
-    
+
     if not all([shop, code, hmac_param]):
         return jsonify({"error": "Missing required parameters"}), 400
-    
+
     if not validate_hmac(request.args):
         return jsonify({"error": "Invalid HMAC"}), 403
-    
+
     try:
-        # 1. Get access token
+        # 1) Get Shopify access token
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
             'client_id': SHOPIFY_API_KEY,
@@ -183,8 +183,8 @@ def auth_callback():
         })
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
- 
-        # 2. Embed app in Shopify admin with dynamic widget.js
+
+        # 2) Create ScriptTag to load widget.js
         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
         requests.post(embed_url, json={
             "script_tag": {
@@ -194,53 +194,23 @@ def auth_callback():
         }, headers={
             "X-Shopify-Access-Token": access_token
         })
-        
-        # 3. Fetch client_id and email from the database
+
+        # 3) Fetch client_id and email from database JUST BEFORE REDIRECT
         conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
-        # Query the store table to find the store by URL
-        cursor.execute(
-            "SELECT id, client_id FROM store WHERE url = %s",
-            (shop,)
-        )
-        store = cursor.fetchone()
-        
-        if not store:
-            conn.close()
-            return jsonify({"error": f"Store with URL {shop} not found in the database"}), 404
-        
-        client_id = store['client_id']
-        
-        # Query the client table to get the email
-        cursor.execute(
-            "SELECT email FROM client WHERE id = %s",
-            (client_id,)
-        )
-        client = cursor.fetchone()
-        
-        if not client:
-            conn.close()
-            return jsonify({"error": f"Client with ID {client_id} not found"}), 404
-        
-        email = client['email']
-        
-        # Close database connection
+        cur = conn.cursor()
+        cur.execute("SELECT client_id, email FROM clients WHERE shop_url = %s", (shop,))
+        row = cur.fetchone()
+        cur.close()
         conn.close()
-        
-        # 4. Optionally store the access token in the store table
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE store SET acc_token = %s WHERE id = %s",
-            (access_token, store['id'])
-        )
-        conn.commit()
-        conn.close()
-        
-        # 5. Redirect with client_id and email in query parameters
-        return redirect(f"http://localhost:3000/login?store={shop}&client_id={client_id}&email={urllib.parse.quote_plus(email)}")
-    
+
+        client_id, email = (row if row else (None, None))
+
+        # 4) Redirect to frontend with extra params (only if found)
+        if client_id and email:
+            return redirect(f"http://localhost:3000/login?store={shop}&client_id={client_id}&email={email}")
+        else:
+            return redirect(f"http://localhost:3000/login?store={shop}")
+
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
         print(f"OAuth Error: {error_data}")
@@ -248,9 +218,7 @@ def auth_callback():
             "error": "Installation failed",
             "details": error_data
         }), 500
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
 
 
 @app.route('/widget.js')
