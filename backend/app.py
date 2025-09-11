@@ -175,11 +175,7 @@ def auth_callback():
     if not validate_hmac(request.args):
         return jsonify({"error": "Invalid HMAC"}), 403
     
-
-
     try:
-
-
         # 1. Get access token
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
@@ -187,51 +183,59 @@ def auth_callback():
             'client_secret': SHOPIFY_API_SECRET,
             'code': code
         })
-        print("test1-------------------------------------------------------------")
         token_response.raise_for_status()
-        print("test2-------------------------------------------------------------")
         access_token = token_response.json()['access_token']
 
         # 2. Try to find store and client info in database
-
-        print(f"Looking up shop: {shop}")
-
         client_id = None
         email = None
         
-        
         try:
-
-            print("Looking up shop: {shop}")
+            print(f"Looking up shop in database: {shop}")
             conn = get_db_connection()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             
-            # Normalize shop URL for comparison (remove protocol if present)
-            normalized_shop = shop.replace('https://', '').replace('http://', '').rstrip('/')
-            print(f"Normalized shop: {normalized_shop}")
+            # Normalize shop URL for comparison
+            # Shopify sends: store-name.myshopify.com
+            # Your database stores: store-name.myshopify.com (lowercase, no protocol)
+            normalized_shop = shop.lower().replace('https://', '').replace('http://', '').rstrip('/')
+            print(f"Normalized shop for DB lookup: '{normalized_shop}'")
             
-            # Look for store by URL
+            # Debug: Check what stores exist in database
+            cursor.execute("SELECT id, name, url, client_id FROM store")
+            all_stores = cursor.fetchall()
+            print(f"All stores in database: {[{'id': s['id'], 'url': s['url']} for s in all_stores]}")
+            
+            # Look for store by exact URL match
             cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE url = %s", (normalized_shop,))
             store = cursor.fetchone()
 
             if store:
-                print(f"Found store: {store}")
-            else:
-                print("No store found in database")
-
-            if store:
+                print(f"Found store: ID={store['store_id']}, Name={store['name']}, ClientID={store['client_id']}")
+                
                 # Look for client info
                 cursor.execute("SELECT id AS client_id, email FROM client WHERE id = %s", (store["client_id"],))
                 client = cursor.fetchone()
                 if client:
                     client_id = client["client_id"]
                     email = client["email"]
+                    print(f"Found client: ID={client_id}, Email={email}")
+                else:
+                    print(f"No client found for ID: {store['client_id']}")
+            else:
+                print(f"No store found with URL: '{normalized_shop}'")
+                # Try alternative lookup - check if any part matches
+                cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE url LIKE %s", (f'%{normalized_shop}%',))
+                alternative_store = cursor.fetchone()
+                if alternative_store:
+                    print(f"Alternative store found: {alternative_store}")
             
             conn.close()
             
         except Exception as db_error:
-            print(f"Database lookup warning: {db_error}")
-            # Continue even if database lookup fails - this is not critical for installation
+            print(f"Database lookup error: {db_error}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
         
         # 3. Embed app in Shopify admin with dynamic widget.js
         try:
@@ -247,17 +251,15 @@ def auth_callback():
             })
         except Exception as embed_error:
             print(f"Script tag embedding warning: {embed_error}")
-            # Continue even if script tag embedding fails
-
+        
         # 4. Redirect with available information
         redirect_params = f"store={shop}"
         if client_id:
             redirect_params += f"&client_id={client_id}"
         if email:
             redirect_params += f"&email={email}"
-
-
-        print(f"============sdjn==================>, {redirect_params}")
+        
+        print(f"Final redirect URL: http://localhost:3000/login?{redirect_params}")
         
         return redirect(f"http://localhost:3000/login?{redirect_params}")
     
@@ -268,7 +270,6 @@ def auth_callback():
             "error": "Installation failed",
             "details": error_data
         }), 500
-
 
 @app.route('/widget.js')
 def serve_widget_js():
