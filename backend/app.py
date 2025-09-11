@@ -139,6 +139,25 @@ def auth_callback():
         })
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
+
+
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE url = %s", (shop,))
+        store = cursor.fetchone()
+
+        client_id = None
+        email = None
+
+        if store:
+            cursor.execute("SELECT id AS client_id, email FROM client WHERE id = %s", (store["client_id"],))
+            client = cursor.fetchone()
+            if client:
+                client_id = client["client_id"]
+                email = client["email"]
+
+        conn.close()
+
  
         # 2. Embed app in Shopify admin with dynamic widget.js
         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
@@ -151,7 +170,12 @@ def auth_callback():
             "X-Shopify-Access-Token": access_token
         })
         # return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
-        return redirect(f"http://localhost:3000/login?store={shop}")
+        if client_id and email:
+            return redirect(
+                f"http://localhost:3000/login?store={shop}&client_id={client_id}&email={email}"
+            )
+        else:
+            return redirect(f"http://localhost:3000/login?store={shop}")
     
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
@@ -160,6 +184,10 @@ def auth_callback():
             "error": "Installation failed",
             "details": error_data
         }), 500
+
+    except Exception as e:
+        print(f"Database Error: {e}")
+        return jsonify({"error": "Database lookup failed"}), 500
 
 @app.route('/widget.js')
 def serve_widget_js():
