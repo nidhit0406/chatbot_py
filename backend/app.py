@@ -151,7 +151,7 @@ def auth_callback():
             "X-Shopify-Access-Token": access_token
         })
         # return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
-         return redirect(f"http://localhost:3000/login?store={shop}")
+        return redirect(f"http://localhost:3000/login?store={shop}")
     
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
