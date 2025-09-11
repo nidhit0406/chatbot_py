@@ -143,7 +143,16 @@ def auth_callback():
 
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE url = %s", (shop,))
+        # cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE url = %s", (shop,))
+        # Normalize shop domain
+        normalized_shop = shop.replace("https://", "").replace("http://", "").strip("/")
+        print("==================>",normalized_shop )
+
+        cursor.execute(
+            "SELECT id AS store_id, name, client_id FROM store WHERE url = %s",
+            (normalized_shop,)
+        )
+
         store = cursor.fetchone()
 
         client_id = None
