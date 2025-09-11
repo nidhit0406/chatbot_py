@@ -174,7 +174,7 @@ def auth_callback():
         return jsonify({"error": "Invalid HMAC"}), 403
 
     try:
-        # 1) Get Shopify access token
+        # 1) Get Shopify Access Token
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
             'client_id': SHOPIFY_API_KEY,
@@ -184,7 +184,7 @@ def auth_callback():
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
 
-        # 2) Create ScriptTag to load widget.js
+        # 2) Inject ScriptTag for widget.js
         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
         requests.post(embed_url, json={
             "script_tag": {
@@ -195,7 +195,7 @@ def auth_callback():
             "X-Shopify-Access-Token": access_token
         })
 
-        # 3) Fetch client_id and email from database JUST BEFORE REDIRECT
+        # 3) Query your DB for store/client details before redirect
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT client_id, email FROM clients WHERE shop_url = %s", (shop,))
@@ -203,21 +203,19 @@ def auth_callback():
         cur.close()
         conn.close()
 
-        client_id, email = (row if row else (None, None))
+        # Build redirect based on DB result (just like your JS logic)
+        redirect_url = f"http://localhost:3000/login?store={shop}"
+        if row:
+            client_id, email = row
+            if client_id and email:
+                redirect_url += f"&client_id={client_id}&email={email}"
 
-        # 4) Redirect to frontend with extra params (only if found)
-        if client_id and email:
-            return redirect(f"http://localhost:3000/login?store={shop}&client_id={client_id}&email={email}")
-        else:
-            return redirect(f"http://localhost:3000/login?store={shop}")
+        return redirect(redirect_url)
 
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
         print(f"OAuth Error: {error_data}")
-        return jsonify({
-            "error": "Installation failed",
-            "details": error_data
-        }), 500
+        return jsonify({"error": "Installation failed", "details": error_data}), 500
 
 
 
