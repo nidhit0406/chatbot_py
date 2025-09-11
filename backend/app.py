@@ -117,152 +117,74 @@ def install():
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
     return redirect(install_url)
 
-# @app.route('/auth/callback')
-# def auth_callback():
-#     shop = request.args.get('shop')
-#     code = request.args.get('code')
-#     hmac_param = request.args.get('hmac')
-    
-#     if not all([shop, code, hmac_param]):
-#         return jsonify({"error": "Missing required parameters"}), 400
-    
-#     if not validate_hmac(request.args):
-#         return jsonify({"error": "Invalid HMAC"}), 403
-    
-#     try:
-#         # 1. Get access token
-#         token_url = f"https://{shop}/admin/oauth/access_token"
-#         token_response = requests.post(token_url, json={
-#             'client_id': SHOPIFY_API_KEY,
-#             'client_secret': SHOPIFY_API_SECRET,
-#             'code': code
-#         })
-#         token_response.raise_for_status()
-#         access_token = token_response.json()['access_token']
- 
-#         # 2. Embed app in Shopify admin with dynamic widget.js
-#         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-#         requests.post(embed_url, json={
-#             "script_tag": {
-#                 "src": f"{APP_URL}/widget.js?shop={shop}",
-#                 "event": "onload"
-#             }
-#         }, headers={
-#             "X-Shopify-Access-Token": access_token
-#         })
-#         # return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
-#         return redirect(f"http://localhost:3000/login?shop={shop}")
-    
-#     except requests.exceptions.RequestException as e:
-#         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
-#         print(f"OAuth Error: {error_data}")
-#         return jsonify({
-#             "error": "Installation failed",
-#             "details": error_data
-#         }), 500
-
-@app.route('/auth/callback', methods=['GET'])
+@app.route('/auth/callback')
 def auth_callback():
+    shop = request.args.get('shop')
+    code = request.args.get('code')
+    hmac_param = request.args.get('hmac')
+    
+    if not all([shop, code, hmac_param]):
+        return jsonify({"error": "Missing required parameters"}), 400
+    
+    if not validate_hmac(request.args):
+        return jsonify({"error": "Invalid HMAC"}), 403
+    
     try:
-        # Extract query parameters from Shopify callback
-        shop = request.args.get('shop')
-        code = request.args.get('code')
-        state = request.args.get('state')
-        hmac_value = request.args.get('hmac')
-        timestamp = request.args.get('timestamp')
+        # 1. Get access token
+        token_url = f"https://{shop}/admin/oauth/access_token"
+        token_response = requests.post(token_url, json={
+            'client_id': SHOPIFY_API_KEY,
+            'client_secret': SHOPIFY_API_SECRET,
+            'code': code
+        })
+        token_response.raise_for_status()
+        access_token = token_response.json()['access_token']
+ 
+        # 2. Embed app in Shopify admin with dynamic widget.js
+        embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+        requests.post(embed_url, json={
+            "script_tag": {
+                "src": f"{APP_URL}/widget.js?shop={shop}",
+                "event": "onload"
+            }
+        }, headers={
+            "X-Shopify-Access-Token": access_token
+        })
+        # return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
+        # return redirect(f"http://localhost:3000/login?store={shop}")
 
-        if not all([shop, code, state, hmac_value, timestamp]):
-            return jsonify({"message": "Missing required query parameters"}), 400
-
-        # Verify HMAC
-        query_params = request.args.copy()
-        query_params.pop('hmac', None)
-        sorted_params = '&'.join(f"{k}={urllib.parse.quote_plus(v)}" for k, v in sorted(query_params.items()))
-        computed_hmac = hmac.new(
-            bytes(SHOPIFY_API_KEY, 'utf-8'),
-            bytes(sorted_params, 'utf-8'),
-            hashlib.sha256
-        ).hexdigest()
-
-        if not hmac.compare_digest(computed_hmac, hmac_value):
-            return jsonify({"message": "Invalid HMAC signature"}), 401
-
-        # Exchange code for access token
-        access_token = exchange_code_for_token(shop, code)
-        if not access_token:
-            return jsonify({"message": "Failed to obtain access token"}), 500
-
-        # Check if store exists in the database
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute(
-            """
-            SELECT s.id AS store_id, s.name, s.client_id, c.email
+        
+        # Query to find the store and its associated client
+        cursor.execute("""
+            SELECT s.id as store_id, s.client_id, c.email, c.id as client_id
             FROM store s
             JOIN client c ON s.client_id = c.id
             WHERE s.url = %s
-            """,
-            (shop,)
-        )
+        """, (shop,))
+        
         store_data = cursor.fetchone()
-
-        # Update store with access token if it exists
-        if store_data:
-            cursor.execute(
-                """
-                UPDATE store
-                SET acc_token = %s
-                WHERE id = %s
-                """,
-                (access_token, store_data["store_id"])
-            )
-            conn.commit()
-
         conn.close()
-
-        # Build redirect URL
-        base_redirect_url = "http://localhost:3000/login"
+        
         if store_data:
-            query_params = {
-                "store": shop,
-                "email": store_data["email"],
-                "client_id": store_data["client_id"]
-            }
+            # Store exists with a client - redirect with client info
+            client_id = store_data["client_id"]
+            email = store_data["email"]
+            return redirect(f"http://localhost:3000/login?store={shop}&email={email}&client_id={client_id}")
         else:
-            query_params = {"shop": shop}
-
-        redirect_url = f"{base_redirect_url}?{urllib.parse.urlencode(query_params)}"
-        return redirect(redirect_url)
-
-    except Exception as e:
-        print(f"Error in auth_callback: {e}")
-        return jsonify({"message": "Error occurred during authentication callback"}), 500
-
-def exchange_code_for_token(shop, code):
-    """
-    Exchange the authorization code for a Shopify access token.
-    """
-    try:
-        headers = {
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "client_id": SHOPIFY_API_KEY,
-            "client_secret": os.getenv("SHOPIFY_API_SECRET"),
-            "code": code
-        }
-        response = requests.post(
-            f"https://{shop}/admin/oauth/access_token",
-            headers=headers,
-            json=payload,
-            timeout=10
-        )
-        response.raise_for_status()
-        data = response.json()
-        return data.get("access_token")
+            # Store doesn't exist or doesn't have a client - redirect without client info
+            return redirect(f"http://localhost:3000/login?store={shop}")
+    
     except requests.exceptions.RequestException as e:
-        print(f"Error exchanging code for token: {e}")
-        return None
+        error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
+        print(f"OAuth Error: {error_data}")
+        return jsonify({
+            "error": "Installation failed",
+            "details": error_data
+        }), 500
+
+
 
 
 
