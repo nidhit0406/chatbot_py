@@ -8,6 +8,7 @@ import hmac
 import hashlib
 import json
 from urllib.parse import urlencode
+from urllib.parse import quote
 from shopify import Session
 import shopify
 import urllib.parse
