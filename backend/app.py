@@ -117,20 +117,71 @@ def install():
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
     return redirect(install_url)
 
+# @app.route('/auth/callback')
+# def auth_callback():
+#     shop = request.args.get('shop')
+#     code = request.args.get('code')
+#     hmac_param = request.args.get('hmac')
+    
+#     if not all([shop, code, hmac_param]):
+#         return jsonify({"error": "Missing required parameters"}), 400
+    
+#     if not validate_hmac(request.args):
+#         return jsonify({"error": "Invalid HMAC"}), 403
+    
+#     try:
+#         # 1. Get access token
+#         token_url = f"https://{shop}/admin/oauth/access_token"
+#         token_response = requests.post(token_url, json={
+#             'client_id': SHOPIFY_API_KEY,
+#             'client_secret': SHOPIFY_API_SECRET,
+#             'code': code
+#         })
+#         token_response.raise_for_status()
+#         access_token = token_response.json()['access_token']
+ 
+#         # 2. Embed app in Shopify admin with dynamic widget.js
+#         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+#         requests.post(embed_url, json={
+#             "script_tag": {
+#                 "src": f"{APP_URL}/widget.js?shop={shop}",
+#                 "event": "onload"
+#             }
+#         }, headers={
+#             "X-Shopify-Access-Token": access_token
+#         })
+#         return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
+    
+#     except requests.exceptions.RequestException as e:
+#         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
+#         print(f"OAuth Error: {error_data}")
+#         return jsonify({
+#             "error": "Installation failed",
+#             "details": error_data
+#         }), 500
+
+def get_client_info_from_db(shop):
+    # Example: query your DB to get client info for this shop
+    result = db.query("SELECT client_id, email FROM clients WHERE shop=%s", (shop,))
+    if result:
+        return {"client_id": result[0]["client_id"], "email": result[0]["email"]}
+    return None
+
 @app.route('/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
     code = request.args.get('code')
     hmac_param = request.args.get('hmac')
-    
+
     if not all([shop, code, hmac_param]):
         return jsonify({"error": "Missing required parameters"}), 400
-    
+
+    # ✅ Validate HMAC to ensure request is from Shopify
     if not validate_hmac(request.args):
         return jsonify({"error": "Invalid HMAC"}), 403
-    
+
     try:
-        # 1. Get access token
+        # 1️⃣ Exchange temporary code for permanent access token
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
             'client_id': SHOPIFY_API_KEY,
@@ -139,43 +190,38 @@ def auth_callback():
         })
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
- 
-        # 2. Embed app in Shopify admin with dynamic widget.js
-        embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-        requests.post(embed_url, json={
-            "script_tag": {
-                "src": f"{APP_URL}/widget.js?shop={shop}",
-                "event": "onload"
-            }
-        }, headers={
-            "X-Shopify-Access-Token": access_token
-        })
-        # return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
-        # return redirect(f"http://localhost:3000/login?store={shop}")
 
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
-        # Query to find the store and its associated client
-        cursor.execute("""
-            SELECT s.id as store_id, s.client_id, c.email, c.id as client_id
-            FROM store s
-            JOIN client c ON s.client_id = c.id
-            WHERE s.url = %s
-        """, (shop,))
-        
-        store_data = cursor.fetchone()
-        conn.close()
-        
-        if store_data:
-            # Store exists with a client - redirect with client info
-            client_id = store_data["client_id"]
-            email = store_data["email"]
-            return redirect(f"http://localhost:3000/login?store={shop}&email={email}&client_id={client_id}")
+        # 2️⃣ Save store + token in DB
+        save_store_token(shop, access_token)
+
+        # 3️⃣ Optionally register your ScriptTag for widget.js (if you still need it)
+        try:
+            embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+            requests.post(embed_url, json={
+                "script_tag": {
+                    "src": f"{APP_URL}/widget.js?shop={shop}",
+                    "event": "onload"
+                }
+            }, headers={
+                "X-Shopify-Access-Token": access_token
+            })
+        except requests.exceptions.RequestException as e:
+            print(f"⚠️ ScriptTag injection failed: {str(e)}")
+
+        # 4️⃣ Fetch client/user info (like your trainlist API)
+        client_info = get_client_info_from_db(shop)  # you must implement this to return {"client_id": "...", "email": "..."}
+
+        # 5️⃣ Build redirect URL for your React app
+        if client_info:
+            email = urllib.parse.quote_plus(client_info["email"])
+            client_id = urllib.parse.quote_plus(str(client_info["client_id"]))
+            redirect_url = f"http://localhost:3000/login?store={shop}&email={email}&client_id={client_id}"
         else:
-            # Store doesn't exist or doesn't have a client - redirect without client info
-            return redirect(f"http://localhost:3000/login?store={shop}")
-    
+            redirect_url = f"http://localhost:3000/login?store={shop}"
+
+        # 6️⃣ Redirect user to frontend login page
+        return redirect(redirect_url)
+
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
         print(f"OAuth Error: {error_data}")
@@ -183,6 +229,8 @@ def auth_callback():
             "error": "Installation failed",
             "details": error_data
         }), 500
+
+
 
 
 
