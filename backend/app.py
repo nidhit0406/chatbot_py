@@ -117,62 +117,18 @@ def install():
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
     return redirect(install_url)
 
-# @app.route('/auth/callback')
-# def auth_callback():
-#     shop = request.args.get('shop')
-#     code = request.args.get('code')
-#     hmac_param = request.args.get('hmac')
-    
-#     if not all([shop, code, hmac_param]):
-#         return jsonify({"error": "Missing required parameters"}), 400
-    
-#     if not validate_hmac(request.args):
-#         return jsonify({"error": "Invalid HMAC"}), 403
-    
-#     try:
-#         # 1. Get access token
-#         token_url = f"https://{shop}/admin/oauth/access_token"
-#         token_response = requests.post(token_url, json={
-#             'client_id': SHOPIFY_API_KEY,
-#             'client_secret': SHOPIFY_API_SECRET,
-#             'code': code
-#         })
-#         token_response.raise_for_status()
-#         access_token = token_response.json()['access_token']
- 
-#         # 2. Embed app in Shopify admin with dynamic widget.js
-#         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-#         requests.post(embed_url, json={
-#             "script_tag": {
-#                 "src": f"{APP_URL}/widget.js?shop={shop}",
-#                 "event": "onload"
-#             }
-#         }, headers={
-#             "X-Shopify-Access-Token": access_token
-#         })
-#         # return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
-#         return redirect(f"http://localhost:3000/login?store={shop}")
-    
-#     except requests.exceptions.RequestException as e:
-#         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
-#         print(f"OAuth Error: {error_data}")
-#         return jsonify({
-#             "error": "Installation failed",
-#             "details": error_data
-#         }), 500
-
 @app.route('/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
     code = request.args.get('code')
     hmac_param = request.args.get('hmac')
-
+    
     if not all([shop, code, hmac_param]):
         return jsonify({"error": "Missing required parameters"}), 400
-
+    
     if not validate_hmac(request.args):
         return jsonify({"error": "Invalid HMAC"}), 403
-
+    
     try:
         # 1. Get access token
         token_url = f"https://{shop}/admin/oauth/access_token"
@@ -183,7 +139,7 @@ def auth_callback():
         })
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
-
+ 
         # 2. Embed app in Shopify admin with dynamic widget.js
         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
         requests.post(embed_url, json={
@@ -194,28 +150,9 @@ def auth_callback():
         }, headers={
             "X-Shopify-Access-Token": access_token
         })
-
-        # 3. Get client_id + email from DB using shop
-        client_id = None
-        client_email = None
-        conn = get_db_connection()
-        try:
-            with conn.cursor() as cur:
-                cur.execute("SELECT client_id, email FROM clients WHERE shop_domain = %s", (shop,))
-                row = cur.fetchone()
-                if row:
-                    client_id = row.get("client_id")
-                    client_email = row.get("email")
-        finally:
-            conn.close()
-
-        # 4. Redirect with store + optional email/client_id
-        redirect_url = f"http://localhost:3000/login?store={shop}"
-        if client_id and client_email:
-            redirect_url += f"&client_id={client_id}&email={client_email}"
-
-        return redirect(redirect_url)
-
+        # return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
+        return redirect(f"http://localhost:3000/login?store={shop}")
+    
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
         print(f"OAuth Error: {error_data}")
@@ -223,6 +160,7 @@ def auth_callback():
             "error": "Installation failed",
             "details": error_data
         }), 500
+
 
 
 
