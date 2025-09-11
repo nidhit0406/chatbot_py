@@ -166,22 +166,22 @@ def get_client_info_from_db(shop):
     if result:
         return {"client_id": result[0]["client_id"], "email": result[0]["email"]}
     return None
-
 @app.route('/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
     code = request.args.get('code')
     hmac_param = request.args.get('hmac')
 
+    # ✅ Validate required params
     if not all([shop, code, hmac_param]):
         return jsonify({"error": "Missing required parameters"}), 400
 
-    # ✅ Validate HMAC to ensure request is from Shopify
+    # ✅ Validate HMAC (security check)
     if not validate_hmac(request.args):
         return jsonify({"error": "Invalid HMAC"}), 403
 
     try:
-        # 1️⃣ Exchange temporary code for permanent access token
+        # 1️⃣ Exchange temporary code for a permanent access token
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
             'client_id': SHOPIFY_API_KEY,
@@ -191,10 +191,7 @@ def auth_callback():
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
 
-        # 2️⃣ Save store + token in DB
-        save_store_token(shop, access_token)
-
-        # 3️⃣ Optionally register your ScriptTag for widget.js (if you still need it)
+        # 2️⃣ (Optional) Inject ScriptTag for widget.js
         try:
             embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
             requests.post(embed_url, json={
@@ -208,18 +205,18 @@ def auth_callback():
         except requests.exceptions.RequestException as e:
             print(f"⚠️ ScriptTag injection failed: {str(e)}")
 
-        # 4️⃣ Fetch client/user info (like your trainlist API)
-        client_info = get_client_info_from_db(shop)  # you must implement this to return {"client_id": "...", "email": "..."}
+        # 3️⃣ Fetch client/user info (like your trainlist API)
+        client_info = get_client_info_from_db(shop)
 
-        # 5️⃣ Build redirect URL for your React app
+        # 4️⃣ Build frontend redirect URL
+        FRONTEND_URL = "http://localhost:3000"  # ⬅ change to your Vercel/production URL when live
         if client_info:
             email = urllib.parse.quote_plus(client_info["email"])
             client_id = urllib.parse.quote_plus(str(client_info["client_id"]))
-            redirect_url = f"http://localhost:3000/login?store={shop}&email={email}&client_id={client_id}"
+            redirect_url = f"{FRONTEND_URL}/login?store={shop}&email={email}&client_id={client_id}"
         else:
-            redirect_url = f"http://localhost:3000/login?store={shop}"
+            redirect_url = f"{FRONTEND_URL}/login?store={shop}"
 
-        # 6️⃣ Redirect user to frontend login page
         return redirect(redirect_url)
 
     except requests.exceptions.RequestException as e:
@@ -229,6 +226,23 @@ def auth_callback():
             "error": "Installation failed",
             "details": error_data
         }), 500
+
+
+# ✅ Implement this helper to fetch client info
+# def get_client_info_from_db(shop):
+#     """
+#     Replace with your actual database logic.
+#     Should return {"client_id": "...", "email": "..."} if client exists, else None.
+#     """
+#     try:
+#         # Example pseudo-code (replace with your DB queries)
+#         # result = db.session.execute("SELECT client_id, email FROM clients WHERE shop = :shop", {"shop": shop}).fetchone()
+#         # if result:
+#         #     return {"client_id": result.client_id, "email": result.email}
+#         return None  # Default: no client found
+#     except Exception as e:
+#         print(f"⚠️ Failed to fetch client info: {str(e)}")
+#         return None
 
 
 
