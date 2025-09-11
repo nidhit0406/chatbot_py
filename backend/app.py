@@ -247,6 +247,9 @@ def auth_callback():
             redirect_params += f"&client_id={client_id}"
         if email:
             redirect_params += f"&email={email}"
+
+
+        print(f"============sdjn==================>, {redirect_params}")
         
         return redirect(f"http://localhost:3000/login?{redirect_params}")
     
