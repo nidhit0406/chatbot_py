@@ -12,24 +12,17 @@
       store =
         window.location.hostname.replace(".myshopify.com", "") ||
         "unknown-shop";
-      console.log("✅ Set store to:", store);
     }
 
     const config = {
       apiUrl:
-        currentScript.getAttribute("data-api-url") ||
-        "https://n8nflow.byteztech.in/webhook/api/ask",
+        currentScript.getAttribute("data-api-url") || "https://n8nflow.byteztech.in/webhook/api/ask",
       sessionApiUrl: "http://103.39.131.9:8050/create-session",
       store: store,
-      welcomeMessage:
-        currentScript.getAttribute("data-welcome-message") ||
-        "Hello! How can I help you today?",
-      primaryColor:
-        currentScript.getAttribute("data-primary-color") || "#8B5CF6",
-      secondaryColor:
-        currentScript.getAttribute("data-secondary-color") || "#6D28D9",
-      widgetTitle:
-        currentScript.getAttribute("data-widget-title") || "AI Assistant",
+      welcomeMessage: currentScript.getAttribute("data-welcome-message") || "Hello! How can I help you today?",
+      primaryColor: currentScript.getAttribute("data-primary-color") || "#8B5CF6",
+      secondaryColor: currentScript.getAttribute("data-secondary-color") || "#6D28D9",  
+      widgetTitle: currentScript.getAttribute("data-widget-title") || "AI Assistant",
       position: currentScript.getAttribute("data-position") || "right",
     };
 
@@ -37,61 +30,21 @@
     let clientIdFromApi = null;
     let clientEmailFromApi = null;
 
-    // async function fetchTrainings() {
-    //   try {
-    //     console.log("Fetching trainings for store:", config.store);
-    //     const res = await fetch(`https://chatbot-bpy.clustersofttech.com/trainlist?domain=${encodeURIComponent(config.store)}`);
-    //     const data = await res.json();
-    //     console.log("✅ Trainings fetched for store:", config.store, data);
-    //     if (data.state && data.state.storeExists) {
-    //       storeIdFromApi = data.store.store_id;
-    //       clientIdFromApi = data.client_id;
-    //       clientEmailFromApi = data.email;
-    //     } else if (data.state && data.state.clientExists) {
-    //       clientIdFromApi = data.client_id;
-    //       clientEmailFromApi = data.email;
-    //     }
-    //     return data;
-    //   } catch (err) {
-    //     console.error("❌ Error fetching trainings for store:", config.store, err);
-    //     return { state: { storeExists: false, clientExists: false, hasTrainings: false } };
-    //   }
-    // }
 
     async function fetchTrainings() {
       try {
-        console.log("Fetching trainings for store:", config.store);
-        const res = await fetch(
-          // `https://chatbot-bpy.clustersofttech.com/trainlist?domain=${encodeURIComponent(config.store)}`
-          `http://127.0.0.1:5000/trainlist?domain=${encodeURIComponent(
-            config.store
-          )}`
+        const res = await fetch( 
+          `http://127.0.0.1:5000/trainlist?domain=${encodeURIComponent(config.store)}`
         );
         const data = await res.json();
 
-        console.log("✅ Trainings fetched for store:", config.store, data);
-
-        // Extract values safely
         storeIdFromApi = data?.store?.store_id || null;
         clientIdFromApi = data?.client_id || null;
         clientEmailFromApi = data?.email || null;
 
-        console.log(
-          "Extracted values - storeIdFromApi:",
-          storeIdFromApi,
-          "clientIdFromApi:",
-          clientIdFromApi,
-          "clientEmailFromApi:",
-          clientEmailFromApi
-        );
-
         return data;
       } catch (err) {
-        console.error(
-          "❌ Error fetching trainings for store:",
-          config.store,
-          err
-        );
+        console.error("❌ Error fetching trainings for store:", config.store, err);
         return {
           state: {
             storeExists: false,
@@ -105,49 +58,22 @@
     // Call fetchTrainings exactly once
     const trainingsData = await fetchTrainings();
 
-    // Handle navigation and client management based on state
-    // if (trainingsData.state.storeExists && trainingsData.state.hasTrainings) {
-    //   console.log("✅ Trainings found for store:", config.store, "→ Initializing widget with client_id:", clientIdFromApi);
-    //   initWidget(config, clientIdFromApi);
-    // } else if (trainingsData.state.clientExists) {
-    //   console.log("⚠️ Client exists but no store/trainings, redirecting to login with prefilled email:", clientEmailFromApi);
-    //   window.location.href = `http://localhost:3000/login?store=${encodeURIComponent(config.store)}&email=${encodeURIComponent(clientEmailFromApi || '')}`;
-    // } else {
-    //   console.log("⚠️ No client/store, redirecting to sign-up for store:", config.store);
-    //   window.location.href = `http://localhost:3000/login?store=${encodeURIComponent(config.store)}`;
-    // }
-
     if (trainingsData.state.storeExists && trainingsData.state.hasTrainings) {
-      // ✅ Case 1: Store & Trainings exist → init widget
-      console.log(
-        "✅ Trainings found for store:",
-        config.store,
-        "→ Initializing widget with client_id:",
-        clientIdFromApi
-      );
       initWidget(config, clientIdFromApi);
     } else if (
-      trainingsData.state.storeExists &&
-      !trainingsData.state.clientExists
+      trainingsData.state.storeExists && !trainingsData.state.clientExists
     ) {
       // ⚠️ Case 2: Store exists but NO trainings → redirect with store+email
-      window.location.href = `http://localhost:3000/login?store=${encodeURIComponent(
-        config.store
-      )}`;
+      window.location.href = `http://localhost:3000/login?store=${encodeURIComponent(config.store)}`;
     } else if (trainingsData.state.clientExists) {
       // ⚠️ Case 3: Client exists but no store → redirect with store+email
-      window.location.href =
-        `http://localhost:3000/login?store=${encodeURIComponent(
-          config.store
-        )}` +
+      window.location.href = `http://localhost:3000/login?store=${encodeURIComponent(config.store)}` +
         ((clientEmailFromApi && clientIdFromApi)
           ? `&email=${encodeURIComponent(clientEmailFromApi)}&client_id=${encodeURIComponent(clientIdFromApi)}`
           : "");
     } else {
       // ⚠️ Case 4: Neither store nor client exist → redirect with only store
-      window.location.href = `http://localhost:3000/login?store=${encodeURIComponent(
-        config.store
-      )}`;
+      window.location.href = `http://localhost:3000/login?store=${encodeURIComponent(config.store)}`;
     }
   })();
 
