@@ -140,9 +140,11 @@ def auth_callback():
         token_response.raise_for_status()
         access_token = token_response.json()['access_token']
 
-
+        print("==================>111111" )
         conn = get_db_connection()
+        print("==================>22222222" )
         cursor = conn.cursor(cursor_factory=RealDictCursor)
+        print("==================>33333333" )
         # cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE url = %s", (shop,))
         # Normalize shop domain
         normalized_shop = shop.replace("https://", "").replace("http://", "").strip("/")
