@@ -162,8 +162,6 @@ def install():
 #         }), 500
 
 
-from flask import redirect
-
 @app.route('/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
@@ -177,7 +175,7 @@ def auth_callback():
         return jsonify({"error": "Invalid HMAC"}), 403
 
     try:
-        # 1. Get access token from Shopify
+        # 1. Get access token
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
             'client_id': SHOPIFY_API_KEY,
@@ -185,39 +183,11 @@ def auth_callback():
             'code': code
         })
         token_response.raise_for_status()
-        print("sjdbh======================")
         access_token = token_response.json()['access_token']
 
-        # 2. Store or update access token in the database
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Check if the store exists
-        cursor.execute(
-            "SELECT id, client_id FROM store WHERE url = %s",
-            (shop,)
-        )
-        store = cursor.fetchone()
-
-        if not store:
-            conn.close()
-            return jsonify({"error": "Store not found in database"}), 404
-
-        # Update store with access token
-        cursor.execute(
-            """
-            UPDATE store 
-            SET acc_token = %s, status = %s 
-            WHERE id = %s
-            RETURNING id, name, url, status, created_at
-            """,
-            (access_token, 'active', store['id'])
-        )
-        updated_store = cursor.fetchone()
-
-        # 3. Embed app in Shopify admin with dynamic widget.js
+        # 2. Embed app in Shopify admin with dynamic widget.js
         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-        embed_response = requests.post(embed_url, json={
+        requests.post(embed_url, json={
             "script_tag": {
                 "src": f"{APP_URL}/widget.js?shop={shop}",
                 "event": "onload"
@@ -225,13 +195,27 @@ def auth_callback():
         }, headers={
             "X-Shopify-Access-Token": access_token
         })
-        embed_response.raise_for_status()
 
-        conn.commit()
-        conn.close()
+        # 3. Get client_id + email from DB using shop
+        client_id = None
+        client_email = None
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT client_id, email FROM clients WHERE shop_domain = %s", (shop,))
+                row = cur.fetchone()
+                if row:
+                    client_id = row.get("client_id")
+                    client_email = row.get("email")
+        finally:
+            conn.close()
 
-        # 4. Redirect to the frontend login page
-        return redirect(f"http://localhost:3000/login?store={shop}")
+        # 4. Redirect with store + optional email/client_id
+        redirect_url = f"http://localhost:3000/login?store={shop}"
+        if client_id and client_email:
+            redirect_url += f"&client_id={client_id}&email={client_email}"
+
+        return redirect(redirect_url)
 
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
@@ -240,14 +224,8 @@ def auth_callback():
             "error": "Installation failed",
             "details": error_data
         }), 500
-    except psycopg2.Error as db_e:
-        print(f"Database error: {db_e}")
-        return jsonify({"error": f"Database error: {str(db_e)}"}), 500
-    finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if 'conn' in locals():
-            conn.close()
+
+
 
 @app.route('/widget.js')
 def serve_widget_js():
