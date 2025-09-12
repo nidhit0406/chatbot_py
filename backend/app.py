@@ -117,20 +117,67 @@ def install():
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
     return redirect(install_url)
 
+# @app.route('/auth/callback')
+# def auth_callback():
+#     shop = request.args.get('shop')
+#     code = request.args.get('code')
+#     hmac_param = request.args.get('hmac')
+    
+#     if not all([shop, code, hmac_param]):
+#         return jsonify({"error": "Missing required parameters"}), 400
+    
+#     if not validate_hmac(request.args):
+#         return jsonify({"error": "Invalid HMAC"}), 403
+    
+#     try:
+#         # 1. Get access token
+#         token_url = f"https://{shop}/admin/oauth/access_token"
+#         token_response = requests.post(token_url, json={
+#             'client_id': SHOPIFY_API_KEY,
+#             'client_secret': SHOPIFY_API_SECRET,
+#             'code': code
+#         })
+#         token_response.raise_for_status()
+#         access_token = token_response.json()['access_token']
+ 
+#         # 2. Embed app in Shopify admin with dynamic widget.js
+#         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+#         requests.post(embed_url, json={
+#             "script_tag": {
+#                 "src": f"{APP_URL}/widget.js?shop={shop}",
+#                 "event": "onload"
+#             }
+#         }, headers={
+#             "X-Shopify-Access-Token": access_token
+#         })
+#         # return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
+#         return redirect(f"http://localhost:3000/login?store={shop}")
+    
+#     except requests.exceptions.RequestException as e:
+#         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
+#         print(f"OAuth Error: {error_data}")
+#         return jsonify({
+#             "error": "Installation failed",
+#             "details": error_data
+#         }), 500
+
+
+from flask import redirect
+
 @app.route('/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
     code = request.args.get('code')
     hmac_param = request.args.get('hmac')
-    
+
     if not all([shop, code, hmac_param]):
         return jsonify({"error": "Missing required parameters"}), 400
-    
+
     if not validate_hmac(request.args):
         return jsonify({"error": "Invalid HMAC"}), 403
-    
+
     try:
-        # 1. Get access token
+        # 1. Get access token from Shopify
         token_url = f"https://{shop}/admin/oauth/access_token"
         token_response = requests.post(token_url, json={
             'client_id': SHOPIFY_API_KEY,
@@ -138,11 +185,39 @@ def auth_callback():
             'code': code
         })
         token_response.raise_for_status()
+        print("sjdbh======================")
         access_token = token_response.json()['access_token']
- 
-        # 2. Embed app in Shopify admin with dynamic widget.js
+
+        # 2. Store or update access token in the database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if the store exists
+        cursor.execute(
+            "SELECT id, client_id FROM store WHERE url = %s",
+            (shop,)
+        )
+        store = cursor.fetchone()
+
+        if not store:
+            conn.close()
+            return jsonify({"error": "Store not found in database"}), 404
+
+        # Update store with access token
+        cursor.execute(
+            """
+            UPDATE store 
+            SET acc_token = %s, status = %s 
+            WHERE id = %s
+            RETURNING id, name, url, status, created_at
+            """,
+            (access_token, 'active', store['id'])
+        )
+        updated_store = cursor.fetchone()
+
+        # 3. Embed app in Shopify admin with dynamic widget.js
         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-        requests.post(embed_url, json={
+        embed_response = requests.post(embed_url, json={
             "script_tag": {
                 "src": f"{APP_URL}/widget.js?shop={shop}",
                 "event": "onload"
@@ -150,9 +225,14 @@ def auth_callback():
         }, headers={
             "X-Shopify-Access-Token": access_token
         })
-        # return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
+        embed_response.raise_for_status()
+
+        conn.commit()
+        conn.close()
+
+        # 4. Redirect to the frontend login page
         return redirect(f"http://localhost:3000/login?store={shop}")
-    
+
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
         print(f"OAuth Error: {error_data}")
@@ -160,9 +240,14 @@ def auth_callback():
             "error": "Installation failed",
             "details": error_data
         }), 500
-
-
-
+    except psycopg2.Error as db_e:
+        print(f"Database error: {db_e}")
+        return jsonify({"error": f"Database error: {str(db_e)}"}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
 
 @app.route('/widget.js')
 def serve_widget_js():
