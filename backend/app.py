@@ -202,7 +202,7 @@ def auth_callback():
         conn = get_db_connection()
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT client_id, email FROM clients WHERE shop_domain = %s", (shop,))
+                cur.execute("SELECT client_id, name FROM store WHERE url = %s", (shop,))
                 row = cur.fetchone()
                 if row:
                     client_id = row.get("client_id")
