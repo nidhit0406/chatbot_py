@@ -149,10 +149,19 @@ def auth_callback():
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
-            cur.execute("SELECT client_id, name FROM store WHERE url = %s", (shop,))
+            # 1. Get client_id from store table
+            cur.execute("SELECT client_id FROM store WHERE url = %s", (shop,))
             row = cur.fetchone()
+            client_id = row['client_id'] if row else None
 
-            # 1. Get access token
+            # 2. Get email from client table using client_id
+            client_email = None
+            if client_id:
+                cur.execute("SELECT email FROM client WHERE id = %s", (client_id,))
+                client_row = cur.fetchone()
+                client_email = client_row['email'] if client_row else None
+
+            # 3. Get access token
             token_url = f"https://{shop}/admin/oauth/access_token"
             token_response = requests.post(token_url, json={
                 'client_id': SHOPIFY_API_KEY,
@@ -162,7 +171,7 @@ def auth_callback():
             token_response.raise_for_status()
             access_token = token_response.json()['access_token']
 
-            # 2. Embed app in Shopify admin with dynamic widget.js
+            # 4. Embed app in Shopify admin with dynamic widget.js
             embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
             requests.post(embed_url, json={
                 "script_tag": {
@@ -173,17 +182,10 @@ def auth_callback():
                 "X-Shopify-Access-Token": access_token
             })
 
-            # 3. Get client_id + email from DB using shop
-            client_id = None
-            client_email = None
-            if row:
-                client_id = row.get("client_id")
-                client_email = row.get("name")
-
-            # 4. Redirect with store + optional email/client_id
+            # 5. Redirect with store + optional email/client_id
             redirect_url = f"http://localhost:3000/login?store={shop}"
-            if client_id and client_email:
-                redirect_url += f"&client_id={client_id}&email={client_email}"
+            if client_email and client_id:
+                redirect_url += f"&email={client_email}&client_id={client_id}"
 
         return redirect(redirect_url)
 
