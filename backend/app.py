@@ -12,6 +12,7 @@ from shopify import Session
 import shopify
 import urllib.parse
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
@@ -43,11 +44,27 @@ products_db = {}  # {shop_domain: [product1, product2...]}
 password = "Dcmh#2026"
 escaped_password = urllib.parse.quote_plus(password)
 DATABASE_URI = f'postgresql://shopifyai:{escaped_password}@103.39.131.9:5432/shopifyai'
-# DATABASE_URI = f'postgresql://postgres:1112@localhost:5432/shopify_ai'
 
+# Initialize connection pool
+db_pool = None
+
+def init_db_pool():
+    global db_pool
+    db_pool = psycopg2.pool.ThreadedConnectionPool(
+        1,  # Minimum number of connections
+        20,  # Maximum number of connections
+        DATABASE_URI,
+        cursor_factory=RealDictCursor
+    )
 
 def get_db_connection():
-    return psycopg2.connect(DATABASE_URI, cursor_factory=RealDictCursor)
+    return db_pool.getconn()
+
+def release_db_connection(conn):
+    db_pool.putconn(conn)
+
+# Initialize pool when the app starts
+init_db_pool()
 
 def validate_hmac(query_params):
     hmac_param = query_params.get('hmac')
@@ -117,51 +134,6 @@ def install():
     install_url = f"https://{shop}/admin/oauth/authorize?client_id={SHOPIFY_API_KEY}&scope={scopes}&redirect_uri={redirect_uri}"
     return redirect(install_url)
 
-# @app.route('/auth/callback')
-# def auth_callback():
-#     shop = request.args.get('shop')
-#     code = request.args.get('code')
-#     hmac_param = request.args.get('hmac')
-    
-#     if not all([shop, code, hmac_param]):
-#         return jsonify({"error": "Missing required parameters"}), 400
-    
-#     if not validate_hmac(request.args):
-#         return jsonify({"error": "Invalid HMAC"}), 403
-    
-#     try:
-#         # 1. Get access token
-#         token_url = f"https://{shop}/admin/oauth/access_token"
-#         token_response = requests.post(token_url, json={
-#             'client_id': SHOPIFY_API_KEY,
-#             'client_secret': SHOPIFY_API_SECRET,
-#             'code': code
-#         })
-#         token_response.raise_for_status()
-#         access_token = token_response.json()['access_token']
- 
-#         # 2. Embed app in Shopify admin with dynamic widget.js
-#         embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-#         requests.post(embed_url, json={
-#             "script_tag": {
-#                 "src": f"{APP_URL}/widget.js?shop={shop}",
-#                 "event": "onload"
-#             }
-#         }, headers={
-#             "X-Shopify-Access-Token": access_token
-#         })
-#         # return redirect(f"https://{shop}/admin/apps/{SHOPIFY_APP_HANDLE}")
-#         return redirect(f"http://localhost:3000/login?store={shop}")
-    
-#     except requests.exceptions.RequestException as e:
-#         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
-#         print(f"OAuth Error: {error_data}")
-#         return jsonify({
-#             "error": "Installation failed",
-#             "details": error_data
-#         }), 500
-
-
 @app.route('/auth/callback')
 def auth_callback():
     shop = request.args.get('shop')
@@ -175,57 +147,52 @@ def auth_callback():
         return jsonify({"error": "Invalid HMAC"}), 403
 
     try:
-        # 1. Get access token
-        token_url = f"https://{shop}/admin/oauth/access_token"
-        token_response = requests.post(token_url, json={
-            'client_id': SHOPIFY_API_KEY,
-            'client_secret': SHOPIFY_API_SECRET,
-            'code': code
-        })
-        token_response.raise_for_status()
-        access_token = token_response.json()['access_token']
-
-        # 2. Embed app in Shopify admin with dynamic widget.js
-        embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
-        requests.post(embed_url, json={
-            "script_tag": {
-                "src": f"{APP_URL}/widget.js?shop={shop}",
-                "event": "onload"
-            }
-        }, headers={
-            "X-Shopify-Access-Token": access_token
-        })
-
-        # 3. Get client_id + email from DB using shop
-        client_id = None
-        client_email = None
         conn = get_db_connection()
-        try:
-            with conn.cursor() as cur:
-                cur.execute("SELECT client_id, name FROM store WHERE url = %s", (shop,))
-                row = cur.fetchone()
-                if row:
-                    client_id = row.get("client_id")
-                    client_email = row.get("email")
-        finally:
-            conn.close()
+        with conn.cursor() as cur:
+            cur.execute("SELECT client_id, name FROM store WHERE url = %s", (shop,))
+            row = cur.fetchone()
 
-        # 4. Redirect with store + optional email/client_id
-        redirect_url = f"http://localhost:3000/login?store={shop}"
-        if client_id and client_email:
-            redirect_url += f"&client_id={client_id}&email={client_email}"
+            # 1. Get access token
+            token_url = f"https://{shop}/admin/oauth/access_token"
+            token_response = requests.post(token_url, json={
+                'client_id': SHOPIFY_API_KEY,
+                'client_secret': SHOPIFY_API_SECRET,
+                'code': code
+            })
+            token_response.raise_for_status()
+            access_token = token_response.json()['access_token']
+
+            # 2. Embed app in Shopify admin with dynamic widget.js
+            embed_url = f"https://{shop}/admin/api/2024-01/script_tags.json"
+            requests.post(embed_url, json={
+                "script_tag": {
+                    "src": f"{APP_URL}/widget.js?shop={shop}",
+                    "event": "onload"
+                }
+            }, headers={
+                "X-Shopify-Access-Token": access_token
+            })
+
+            # 3. Get client_id + email from DB using shop
+            client_id = None
+            client_email = None
+            if row:
+                client_id = row.get("client_id")
+                client_email = row.get("email")
+
+            # 4. Redirect with store + optional email/client_id
+            redirect_url = f"http://localhost:3000/login?store={shop}"
+            if client_id and client_email:
+                redirect_url += f"&client_id={client_id}&email={client_email}"
 
         return redirect(redirect_url)
 
     except requests.exceptions.RequestException as e:
         error_data = e.response.json() if hasattr(e, 'response') and e.response else {'error': str(e)}
         print(f"OAuth Error: {error_data}")
-        return jsonify({
-            "error": "Installation failed",
-            "details": error_data
-        }), 500
-
-
+        return jsonify({"error": "Installation failed", "details": error_data}), 500
+    finally:
+        release_db_connection(conn)
 
 @app.route('/widget.js')
 def serve_widget_js():
@@ -233,8 +200,6 @@ def serve_widget_js():
     if not store_id:
         return "Error: shop parameter is required", 400
 
-    # Use shop domain as store_id (no database query)
-    # store_id = shop_domain.replace('.myshopify.com', '')  # e.g., "example-store" from "example-store.myshopify.com"
     response = f"""
     (function() {{
         var script = document.createElement('script');
@@ -322,74 +287,6 @@ def clear_messages():
     ]
     return jsonify({"status": "success", "message": "Chat history cleared"})
 
-# @app.route('/trainlist', methods=['GET'])
-# def get_trainlist():
-#     store_id = request.args.get('store_id')
-#     if not store_id:
-#         return jsonify({"message": "store_id parameter is required!"}), 400
-
-#     try:
-#         conn = get_db_connection()
-#         cursor = conn.cursor(cursor_factory=RealDictCursor)
-#         cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE id = %s", (store_id,))
-#         store = cursor.fetchone()
-
-#         if not store:
-#             conn.close()
-#             return jsonify({"message": "Store not found!"}), 404
-
-#         cursor.execute("SELECT id AS client_id, email, created_at FROM client WHERE id = %s", (store["client_id"],))
-#         client = cursor.fetchone()
-
-#         if not client:
-#             conn.close()
-#             return jsonify({"message": "Client not found!"}), 404
-
-#         cursor.execute(
-#             """
-#             SELECT id AS training_id, created_at, store_id, file_jsonl, jsonl_status, 
-#                    file_id, model_id, status, error_message, try, client_id, is_running, website_url
-#             FROM training
-#             WHERE store_id = %s
-#             ORDER BY created_at DESC
-#             """,
-#             (store_id,)
-#         )
-#         training_records = cursor.fetchall()
-#         conn.close()
-
-#         return jsonify({
-#             "client_id": client["client_id"],
-#             "email": client["email"],
-#             "created_at": client["created_at"].isoformat() if client["created_at"] else None,
-#             "store": {
-#                 "store_id": store["store_id"],
-#                 "name": store["name"],
-#             },
-#             "trainings": [
-#                 {
-#                     "training_id": record["training_id"],
-#                     "created_at": record["created_at"].isoformat() if record["created_at"] else None,
-#                     "store_id": record["store_id"],
-#                     "file_jsonl": record["file_jsonl"],
-#                     "jsonl_status": record["jsonl_status"],
-#                     "file_id": record["file_id"],
-#                     "model_id": record["model_id"],
-#                     "status": record["status"],
-#                     "error_message": record["error_message"],
-#                     "try": record["try"],
-#                     "client_id": record["client_id"],
-#                     "is_running": record["is_running"],
-#                     "website_url": record["website_url"]
-#                 }
-#                 for record in training_records
-#             ]
-#         }), 200
-
-#     except Exception as e:
-#         print(f"Error===: {e}")
-#         return jsonify({"message": "Error occurred, please try again."}), 500
-
 @app.route('/trainlist', methods=['GET'])
 def get_trainlist():
     domain = request.args.get('domain')
@@ -398,38 +295,35 @@ def get_trainlist():
 
     try:
         conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Check if store exists
+            cur.execute("SELECT id AS store_id, name, client_id FROM store WHERE url = %s", (domain,))
+            store = cur.fetchone()
+
+            state = {"storeExists": bool(store), "clientExists": False, "hasTrainings": False}
+
+            client = None
+            training_records = []
+
+            if store:
+                cur.execute("SELECT id AS client_id, email, created_at FROM client WHERE id = %s", (store["client_id"],))
+                client = cur.fetchone()
+                state["clientExists"] = bool(client)
+
+                if client:
+                    cur.execute(
+                        """
+                        SELECT id AS training_id, created_at, store_id, file_jsonl, jsonl_status, 
+                               file_id, model_id, status, error_message, try, client_id, is_running, website_url
+                        FROM training
+                        WHERE store_id = %s
+                        ORDER BY created_at DESC
+                        """,
+                        (store["store_id"],)
+                    )
+                    training_records = cur.fetchall()
+                    state["hasTrainings"] = bool(training_records)
         
-        # Check if store exists
-        cursor.execute("SELECT id AS store_id, name, client_id FROM store WHERE url = %s", (domain,))
-        store = cursor.fetchone()
-
-        state = {"storeExists": bool(store), "clientExists": False, "hasTrainings": False}
-
-        client = None
-        training_records = []
-
-        if store:
-            cursor.execute("SELECT id AS client_id, email, created_at FROM client WHERE id = %s", (store["client_id"],))
-            client = cursor.fetchone()
-            state["clientExists"] = bool(client)
-
-            if client:
-                cursor.execute(
-                    """
-                    SELECT id AS training_id, created_at, store_id, file_jsonl, jsonl_status, 
-                           file_id, model_id, status, error_message, try, client_id, is_running, website_url
-                    FROM training
-                    WHERE store_id = %s
-                    ORDER BY created_at DESC
-                    """,
-                    (store["store_id"],)
-                )
-                training_records = cursor.fetchall()
-                state["hasTrainings"] = bool(training_records)
-        
-        conn.close()
-
         return jsonify({
             "message": "Success" if state["storeExists"] else "Store not found",
             "state": state,
@@ -442,7 +336,8 @@ def get_trainlist():
     except Exception as e:
         print(f"Error===: {e}")
         return jsonify({"message": "Error occurred, please try again.", "state": {"storeExists": False, "clientExists": False, "hasTrainings": False}}), 500
-
+    finally:
+        release_db_connection(conn)
 
 @app.route('/shopify-store', methods=['POST'])
 def add_shopify_store():
@@ -485,36 +380,33 @@ def add_shopify_store():
 
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id 
+                FROM store 
+                WHERE client_id = %s AND name = %s AND url = %s
+                """,
+                (client_id, derived_name, raw_url)
+            )
+            existing_store = cur.fetchone()
 
-        cursor.execute(
-            """
-            SELECT id 
-            FROM store 
-            WHERE client_id = %s AND name = %s AND url = %s
-            """,
-            (client_id, derived_name, raw_url)
-        )
-        existing_store = cursor.fetchone()
+            if existing_store:
+                return jsonify({
+                    "message": f"Store with name '{derived_name}' and URL '{raw_url}' already exists for this client!",
+                    "store_id": existing_store["id"] if isinstance(existing_store, dict) else existing_store[0]
+                }), 200
 
-        if existing_store:
-            conn.close()
-            return jsonify({
-                "message": f"Store with name '{derived_name}' and URL '{raw_url}' already exists for this client!",
-                "store_id": existing_store["id"] if isinstance(existing_store, dict) else existing_store[0]
-            }), 200
-
-        cursor.execute(
-            """
-            INSERT INTO store (client_id, name, url, status) 
-            VALUES (%s, %s, %s, %s) 
-            RETURNING id, created_at
-            """,
-            (client_id, derived_name, raw_url, status)
-        )
-        new_store = cursor.fetchone()
-        conn.commit()
-        conn.close()
+            cur.execute(
+                """
+                INSERT INTO store (client_id, name, url, status) 
+                VALUES (%s, %s, %s, %s) 
+                RETURNING id, created_at
+                """,
+                (client_id, derived_name, raw_url, status)
+            )
+            new_store = cur.fetchone()
+            conn.commit()
 
         return jsonify({
             "message": "Store data added successfully!",
@@ -527,6 +419,8 @@ def add_shopify_store():
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({"message": "Error occurred, please try again."}), 500
+    finally:
+        release_db_connection(conn)
 
 if __name__ == '__main__':
     import os
