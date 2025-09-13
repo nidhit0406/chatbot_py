@@ -42,8 +42,8 @@ products_db = {}  # {shop_domain: [product1, product2...]}
 # Database Connection Setup
 password = "Dcmh#2026"
 escaped_password = urllib.parse.quote_plus(password)
-# DATABASE_URI = f'postgresql://shopifyai:{escaped_password}@103.39.131.9:5432/shopifyai'
-DATABASE_URI = f'postgresql://postgres:1112@localhost:5432/shopify_ai'
+DATABASE_URI = f'postgresql://shopifyai:{escaped_password}@103.39.131.9:5432/shopifyai'
+# DATABASE_URI = f'postgresql://postgres:1112@localhost:5432/shopify_ai'
 
 
 def get_db_connection():
