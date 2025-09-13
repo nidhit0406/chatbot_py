@@ -178,7 +178,7 @@ def auth_callback():
             client_email = None
             if row:
                 client_id = row.get("client_id")
-                client_email = row.get("email")
+                client_email = row.get("name")
 
             # 4. Redirect with store + optional email/client_id
             redirect_url = f"http://localhost:3000/login?store={shop}"
