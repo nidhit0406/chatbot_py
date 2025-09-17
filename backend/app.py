@@ -36,7 +36,7 @@ SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2023-07")
 APP_URL = os.getenv("APP_URL")
 SHOPIFY_APP_HANDLE = os.getenv("SHOPIFY_APP_HANDLE")
 
-# Database simulation
+# Database simulation.   -----
 shops_db = {}  # {shop_domain: {access_token: str, chat_history: list}}
 products_db = {}  # {shop_domain: [product1, product2...]}
 
