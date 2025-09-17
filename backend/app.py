@@ -36,14 +36,15 @@ SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2023-07")
 APP_URL = os.getenv("APP_URL")
 SHOPIFY_APP_HANDLE = os.getenv("SHOPIFY_APP_HANDLE")
 
-# Database simulation.   -----
+# Database simulation
 shops_db = {}  # {shop_domain: {access_token: str, chat_history: list}}
 products_db = {}  # {shop_domain: [product1, product2...]}
 
 # Database Connection Setup
 password = "Dcmh#2026"
 escaped_password = urllib.parse.quote_plus(password)
-DATABASE_URI = f'postgresql://shopifyai:{escaped_password}@103.39.131.9:5432/shopifyai'
+# DATABASE_URI = f'postgresql://shopifyai:{escaped_password}@103.39.131.9:5432/shopifyai'
+DATABASE_URI = f'postgresql://postgresql:1112@localhost:5432/shopifyai'
 
 # Initialize connection pool
 db_pool = None
